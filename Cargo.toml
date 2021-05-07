@@ -1,11 +1,11 @@
 [package]
-name = "webclient"
+name = "tagged-base-64"
 version = "0.1.0"
 authors = ["John D. Corbett <corbett@pictographer.com>"]
 edition = "2018"
-description = "An example web client that runs Rust code compiled into WASM"
-repository = "https://gitlab.com/translucence/webclient"
-license = "Copyright © 2021 Translucence Research, Inc. All rights reserved."
+description = "User-oriented format for binary data. Tagged Base-64 is intended to be used in user interfaces including URLs and text to be copied and pasted without the need for additional encoding, such as quoting or escape sequences."
+repository = "https://gitlab.com/translucence/common/tagged-base-64"
+license-file = "LICENSE"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
