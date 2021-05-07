@@ -1,0 +1,55 @@
+[package]
+name = "webclient"
+version = "0.1.0"
+authors = ["John D. Corbett <corbett@pictographer.com>"]
+edition = "2018"
+description = "An example web client that runs Rust code compiled into WASM"
+repository = "https://gitlab.com/translucence/webclient"
+license = "Copyright © 2021 Translucence Research, Inc. All rights reserved."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+futures-channel = { version = "0.3.13"}
+
+# TODO !corbett Latest is 0.2.69
+serde = { version = "1.0", features = ["derive"] }
+wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }
+
+# Converts futures to promises and promises to futures
+wasm-bindgen-futures="0.4.19"
+
+# Primitive data types, WASM dynamic loading, errors, promises
+js-sys="0.3.46"
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.6", optional = true }
+
+# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
+# compared to the default allocator's ~10K. It is slower than the default
+# allocator, however.
+#
+# Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
+wee_alloc = { version = "0.4.5", optional = true }
+
+base64 = "0.13.0"
+
+web-sys = { version = "0.3.49", features = ["Headers", "RequestInit", "RequestMode", "Request", "Response", "Window"] }
+
+[dev-dependencies]
+wasm-bindgen-test = { version = "0.3.13" }
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
+
+# https://github.com/rustwasm/wasm-bindgen/issues/2279
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Os", "--enable-mutable-globals"]

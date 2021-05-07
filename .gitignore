@@ -1,0 +1,28 @@
+# Apple Mac OS
+.DS_Store
+
+# Rust cargo
+target
+/target
+Cargo.lock
+
+# Node.js stuff
+node_modules
+package-lock.json
+
+# Application configuration file
+# Should match the project directory/executable name.
+webclient.toml
+
+# Emacs temporary files
+*~
+\#*\#
+.\#*
+
+#Python Random Files
+integration-tests/.pytest_cache
+integration-tests/__pycache__
+
+pkg
+www/dist
+www/node_modules
