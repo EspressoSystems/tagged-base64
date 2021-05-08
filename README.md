@@ -1,6 +1,6 @@
-# Tagged Base-64
+# Tagged Base64
 
-User-oriented format for binary data. Tagged Base-64 is intended to be
+User-oriented format for binary data. Tagged Base64 is intended to be
 used in user interfaces including URLs and text to be copied and
 pasted without the need for additional encoding, such as quoting or
 escape sequences.
@@ -25,13 +25,13 @@ For example,
    TX~Zm9vYmFy
    LA~MzE0MTU
 
-Like the base-64 value, the tag is also restricted to the URL-safe
+Like the base64 value, the tag is also restricted to the URL-safe
 base64 character set.
 
-Note, it is allowed for the tag or value to be the empty string. A
+Note: it is allowed for the tag or value to be the empty string. A
 lone delimiter can be parsed as a tagged base64 value.
 
-Note, there is no checksum incorporated in the base-64 value. For many
+Note: there is no checksum incorporated in the base64 value. For many
 applications it would be wise to add this.
 
-Note, integrating this with the Serde crate would be nice.
+Note: integrating this with the Serde crate would be nice.
