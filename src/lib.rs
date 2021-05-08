@@ -1,12 +1,50 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 //
-// See README.md for description and rationale.
+
+//! User-oriented format for binary data. Tagged Base64 is intended to be
+//! used in user interfaces including URLs and text to be copied and
+//! pasted without the need for additional encoding, such as quoting or
+//! escape sequences.
+//!
+//! Large binary values don't fit nicely into JavaScript numbers due to
+//! range and representation. JavaScript numbers are represented as 64-bit
+//! floating point numbers. This means that the largest unsigned integer
+//! that can be represented is 2^53 - 1. Moreover, it is very easy to
+//! accidentally coerce a string that looks like a number into a
+//! JavaScript number, thus running the risk of loss of precision, which
+//! is corruption.  Therefore, values are encoded in base64 to allow safe
+//! transit to- and from JavaScript, including in URLs, as well as display
+//! and input in a user interface.
+//!
+//! To further reduce confusion, the values are prefixed with a tag
+//! intended to disambiguate usage. Although not necessary for
+//! correctness, developers and users may find it convenient to have a
+//! usage hint enabling them to see at a glance whether something is a
+//! transaction id or a ledger address, etc.
+//!
+//! For example,
+//! ```
+//!    TX~Zm9vYmFy
+//!    LA~MzE0MTU
+//! ```
+//!
+//! Like the base64 value, the tag is also restricted to the URL-safe
+//! base64 character set.
+//!
+//! Note: It is allowed for the tag or value to be the empty string. A
+//! lone delimiter can be parsed as a tagged base64 value.
+//!
+//! Note: There is no checksum incorporated in the base64 value. For many
+//! applications it would be wise to add this.
+//!
+//! Note: Integrating this with the Serde crate would be nice.
 
 use base64;
 use core::fmt::Display;
 use std::fmt;
 use wasm_bindgen::prelude::*;
 
+/// The tag string and the binary data.
 #[wasm_bindgen]
 #[derive(Debug, PartialEq, Eq)]
 pub struct TaggedBase64 {
@@ -18,9 +56,10 @@ pub struct TaggedBase64 {
 /// appear in URLs without percent-encoding.
 pub const TB64_DELIM: char = '~';
 
-// Uses '-' and '_' as the 63rd and 64th characters. Does not use padding.
+/// Uses '-' and '_' as the 63rd and 64th characters. Does not use padding.
 pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 
+/// Converts a TaggedBase64 value to a String.
 #[wasm_bindgen]
 pub fn to_string(tb64: &TaggedBase64) -> String {
     format!(
@@ -166,6 +205,8 @@ pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValu
     })
 }
 
+/// Converts any object that supports the Display trait to a JsValue for
+/// passing to Javascript.
 pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
     JsValue::from_str(&format!("{}", d))
 }
