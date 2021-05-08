@@ -4,15 +4,11 @@
 
 #![cfg(target_arch = "wasm32")]
 
-//use wasm_bindgen::prelude::*;
-//extern crate wasm_bindgen_test;
 use wasm_bindgen_test::*;
 
 use base64::{decode_config, encode_config};
 use std::str;
 
-#[path = "../src/tagged_base64.rs"]
-mod tagged_base64;
 use tagged_base64::*;
 
 // Run tests like this

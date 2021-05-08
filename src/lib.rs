@@ -57,7 +57,7 @@ pub fn is_safe_base64_tag(tag: &str) -> bool {
         .is_none()
 }
 
-/// Returns true for characters permitted in URL-safe base-64 encoding,
+/// Returns true for characters permitted in URL-safe base64 encoding,
 /// and false otherwise.
 #[wasm_bindgen]
 pub fn is_safe_base64_ascii(c: char) -> bool {
