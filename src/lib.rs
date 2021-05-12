@@ -23,10 +23,8 @@
 //! transaction id or a ledger address, etc.
 //!
 //! For example,
-//! ```
 //!    TX~Zm9vYmFy
 //!    LA~MzE0MTU
-//! ```
 //!
 //! Like the base64 value, the tag is also restricted to the URL-safe
 //! base64 character set.
