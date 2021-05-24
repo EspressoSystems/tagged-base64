@@ -1,0 +1,17 @@
+stages:
+  - build
+
+variables:
+  BRANCH: $CI_COMMIT_BRANCH
+  CONTAINER_IMAGE: tagged-base64
+  DOCKER_REGISTRY: 279906117593.dkr.ecr.us-east-2.amazonaws.com
+
+before_script:
+  - docker info
+
+build_main:
+  tags:
+    - shell
+  stage: build
+  script:
+    - docker build --pull -t $DOCKER_REGISTRY/$CONTAINER_IMAGE:$CI_COMMIT_BRANCH .
