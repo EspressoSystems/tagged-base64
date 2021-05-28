@@ -43,6 +43,14 @@ fn test_base64_sanity() {
     assert_eq!(decode_config("", TB64_CONFIG).unwrap().len(), 0);
 }
 
+#[wasm_bindgen_test]
+fn test_is_safe_base64_tag() {
+    assert!(TaggedBase64::is_safe_base64_tag(""));
+    assert!(!TaggedBase64::is_safe_base64_tag("~"));
+    assert!(!TaggedBase64::is_safe_base64_tag("T~"));
+    assert!(!TaggedBase64::is_safe_base64_tag("T~a"));
+}
+
 /// Compares to vectors of u8 for equality.
 fn is_equal(va: &[u8], vb: &[u8]) -> bool {
     va.len() == vb.len() && va.iter().zip(vb).all(|(a, b)| *a == *b)
