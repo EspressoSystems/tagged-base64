@@ -38,8 +38,8 @@
 //! Note: Integrating this with the Serde crate would be nice.
 
 use base64;
+use core::fmt;
 use core::fmt::Display;
-use std::fmt;
 use wasm_bindgen::prelude::*;
 
 /// The tag string and the binary data.
@@ -64,8 +64,19 @@ pub fn to_string(tb64: &TaggedBase64) -> String {
         "{}{}{}",
         tb64.tag,
         TB64_DELIM,
-        base64::encode_config(&tb64.value, TB64_CONFIG)
+        TaggedBase64::encode_raw(&tb64.value)
     )
+}
+
+impl From<&TaggedBase64> for String {
+    fn from(tb64: &TaggedBase64) -> Self {
+        format!(
+            "{}{}{}",
+            tb64.tag,
+            TB64_DELIM,
+            TaggedBase64::encode_raw(&tb64.value)
+        )
+    }
 }
 
 /// Produces a string by concatenating the tag and the base64 encoding
@@ -77,32 +88,9 @@ impl fmt::Display for TaggedBase64 {
             "{}{}{}",
             self.tag,
             TB64_DELIM,
-            base64::encode_config(&self.value, TB64_CONFIG)
+            TaggedBase64::encode_raw(&self.value)
         )
     }
-}
-
-/// Checks that an ASCII byte is safe for use in the tag of a
-/// TaggedBase64. Because the tags are merely intended to be mnemonic,
-/// there's no need to support a large and visually ambiguous
-/// character set.
-#[wasm_bindgen]
-pub fn is_safe_base64_tag(tag: &str) -> bool {
-    tag.bytes()
-        .skip_while(|b| is_safe_base64_ascii(*b as char))
-        .next()
-        .is_none()
-}
-
-/// Returns true for characters permitted in URL-safe base64 encoding,
-/// and false otherwise.
-#[wasm_bindgen]
-pub fn is_safe_base64_ascii(c: char) -> bool {
-    ('a'..='z').contains(&c)
-        || ('A'..='Z').contains(&c)
-        || ('0'..='9').contains(&c)
-        || (c == '-')
-        || (c == '_')
 }
 
 #[wasm_bindgen]
@@ -112,11 +100,34 @@ impl TaggedBase64 {
     /// byte values are unconstrained.
     #[wasm_bindgen(constructor)]
     pub fn new(tag: &str, value: &[u8]) -> TaggedBase64 {
-        assert!(is_safe_base64_tag(tag));
+        assert!(TaggedBase64::is_safe_base64_tag(tag));
         TaggedBase64 {
             tag: tag.to_string(),
             value: value.to_vec(),
         }
+    }
+
+    /// Returns true for characters permitted in URL-safe base64 encoding,
+    /// and false otherwise.
+    #[wasm_bindgen]
+    pub fn is_safe_base64_ascii(c: char) -> bool {
+        ('a'..='z').contains(&c)
+            || ('A'..='Z').contains(&c)
+            || ('0'..='9').contains(&c)
+            || (c == '-')
+            || (c == '_')
+    }
+
+    /// Checks that an ASCII byte is safe for use in the tag of a
+    /// TaggedBase64. Because the tags are merely intended to be mnemonic,
+    /// there's no need to support a large and visually ambiguous
+    /// character set.
+    #[wasm_bindgen]
+    pub fn is_safe_base64_tag(tag: &str) -> bool {
+        tag.bytes()
+            .skip_while(|b| TaggedBase64::is_safe_base64_ascii(*b as char))
+            .next()
+            .is_none()
     }
 
     /// Gets the tag of a TaggedBase64 instance.
@@ -128,7 +139,7 @@ impl TaggedBase64 {
     /// Sets the tag of a TaggedBase64 instance.
     #[wasm_bindgen(setter)]
     pub fn set_tag(&mut self, tag: &str) {
-        assert!(is_safe_base64_tag(tag));
+        assert!(TaggedBase64::is_safe_base64_tag(tag));
         self.tag = tag.to_string();
     }
 
@@ -142,6 +153,22 @@ impl TaggedBase64 {
     #[wasm_bindgen(setter)]
     pub fn set_value(&mut self, value: &[u8]) {
         self.value = value.to_vec();
+    }
+
+    /// Wraps the underlying base64 encoder.
+    // WASM doesn't support the most general type.
+    //
+    // pub fn encode_raw<T: ?Sized + AsRef<[u8]>>(input: &T) -> String {
+    //     base64::encode_config(input, TB64_CONFIG)
+    // }
+    pub fn encode_raw(input: &[u8]) -> String {
+        base64::encode_config(input, TB64_CONFIG)
+    }
+
+    /// Wraps the underlying base64 decoder.
+    // WASM doesn't support returning Result<Vec<u8>, base64::DecodeError>
+    pub fn decode_raw(value: &str) -> Result<Vec<u8>, JsValue> {
+        base64::decode_config(value, TB64_CONFIG).map_err(|err| to_jsvalue(err))
     }
 }
 
@@ -160,7 +187,7 @@ pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
         .ok_or(to_jsvalue("Missing delimiter parsing TaggedBase64"))?;
     let (tag, delim_b64) = tb64.split_at(delim_pos);
 
-    if !is_safe_base64_tag(tag) {
+    if !TaggedBase64::is_safe_base64_tag(tag) {
         return Err(to_jsvalue(format!(
             "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
             tag
@@ -173,7 +200,7 @@ pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
     let value = iter.as_str();
 
     // Base64 decode the value.
-    let bytes = base64::decode_config(value, TB64_CONFIG).map_err(to_jsvalue)?;
+    let bytes = TaggedBase64::decode_raw(value)?;
 
     Ok(TaggedBase64 {
         tag: tag.to_string(),
@@ -190,7 +217,7 @@ pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
 /// padding is used.
 #[wasm_bindgen]
 pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValue> {
-    if !is_safe_base64_tag(tag) {
+    if !TaggedBase64::is_safe_base64_tag(tag) {
         return Err(to_jsvalue(format!(
             "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
             tag
@@ -198,8 +225,7 @@ pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValu
     }
     Ok(TaggedBase64 {
         tag: tag.to_string(),
-        value: base64::decode_config(value, base64::URL_SAFE_NO_PAD)
-            .map_err(|err| to_jsvalue(err))?,
+        value: TaggedBase64::decode_raw(value)?,
     })
 }
 
