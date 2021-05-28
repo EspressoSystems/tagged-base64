@@ -170,67 +170,71 @@ impl TaggedBase64 {
     pub fn decode_raw(value: &str) -> Result<Vec<u8>, JsValue> {
         base64::decode_config(value, TB64_CONFIG).map_err(|err| to_jsvalue(err))
     }
-}
+    //}
 
-/// Parses a string of the form tag~value into a TaggedBase64 value.
-///
-/// The tag is restricted to URL-safe base64 ASCII characters. The tag
-/// may be empty. The delimiter is required.
-///
-/// The value is a base64-encoded string, using the URL-safe character
-/// set, and no padding is used.
-#[wasm_bindgen]
-pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
-    // Would be convenient to use split_first() here. Alas, not stable yet.
-    let delim_pos = tb64
-        .find(TB64_DELIM)
-        .ok_or(to_jsvalue("Missing delimiter parsing TaggedBase64"))?;
-    let (tag, delim_b64) = tb64.split_at(delim_pos);
+    /// Parses a string of the form tag~value into a TaggedBase64 value.
+    ///
+    /// The tag is restricted to URL-safe base64 ASCII characters. The tag
+    /// may be empty. The delimiter is required.
+    ///
+    /// The value is a base64-encoded string, using the URL-safe character
+    /// set, and no padding is used.
+    #[wasm_bindgen]
+    pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
+        // Would be convenient to use split_first() here. Alas, not stable yet.
+        let delim_pos = tb64
+            .find(TB64_DELIM)
+            .ok_or(to_jsvalue("Missing delimiter parsing TaggedBase64"))?;
+        let (tag, delim_b64) = tb64.split_at(delim_pos);
 
-    if !TaggedBase64::is_safe_base64_tag(tag) {
-        return Err(to_jsvalue(format!(
+        if !TaggedBase64::is_safe_base64_tag(tag) {
+            return Err(to_jsvalue(format!(
             "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
             tag
         )));
+        }
+
+        // Remove the delimiter.
+        let mut iter = delim_b64.chars();
+        iter.next();
+        let value = iter.as_str();
+
+        // Base64 decode the value.
+        let bytes = TaggedBase64::decode_raw(value)?;
+
+        Ok(TaggedBase64 {
+            tag: tag.to_string(),
+            value: bytes,
+        })
     }
 
-    // Remove the delimiter.
-    let mut iter = delim_b64.chars();
-    iter.next();
-    let value = iter.as_str();
-
-    // Base64 decode the value.
-    let bytes = TaggedBase64::decode_raw(value)?;
-
-    Ok(TaggedBase64 {
-        tag: tag.to_string(),
-        value: bytes,
-    })
-}
-
-/// Constructs a TaggedBase64 from a tag string and a base64-encoded
-/// value.
-///
-/// The tag is restricted to URL-safe base64 ASCII characters. The tag
-/// may be empty. The delimiter is required.  The value is a a
-/// base64-encoded string, using the URL-safe character set, and no
-/// padding is used.
-#[wasm_bindgen]
-pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValue> {
-    if !TaggedBase64::is_safe_base64_tag(tag) {
-        return Err(to_jsvalue(format!(
+    /// Constructs a TaggedBase64 from a tag string and a base64-encoded
+    /// value.
+    ///
+    /// The tag is restricted to URL-safe base64 ASCII characters. The tag
+    /// may be empty. The delimiter is required.  The value is a a
+    /// base64-encoded string, using the URL-safe character set, and no
+    /// padding is used.
+    #[wasm_bindgen]
+    pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValue> {
+        if !TaggedBase64::is_safe_base64_tag(tag) {
+            return Err(to_jsvalue(format!(
             "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
             tag
         )));
+        }
+        Ok(TaggedBase64 {
+            tag: tag.to_string(),
+            value: TaggedBase64::decode_raw(value)?,
+        })
     }
-    Ok(TaggedBase64 {
-        tag: tag.to_string(),
-        value: TaggedBase64::decode_raw(value)?,
-    })
 }
 
 /// Converts any object that supports the Display trait to a JsValue for
 /// passing to Javascript.
+///
+/// Note: Type parameters aren't supported by `wasm-pack` yet so this
+/// can't be included in the TaggedBase64 type implementation.
 pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
     JsValue::from_str(&format!("{}", d))
 }
