@@ -66,15 +66,14 @@ fn test_is_equal() {
 }
 
 /// Checks basic construction, printing, and parsing:
-/// - Can construct a TaggedBase64 from a tag string and a base64 string
+/// - Can construct from a tag string and a binary value
 /// - Tag and value match the supplied values
 /// - String representation can be generated
 /// - Generated string can be parsed
 /// - Accessors and parsed string match the supplied values
-fn check_tb64(tag: &str, lit: &str) {
-    let b64 = encode_config(lit, TB64_CONFIG);
-    let tb64 = JsTaggedBase64::make_tagged_base64(tag, &b64).unwrap();
-    let str = format!("{}{}{}", &tag, TB64_DELIM, &b64);
+fn check_tb64(tag: &str, value: &[u8]) {
+    let tb64 = JsTaggedBase64::new(tag, &value).unwrap();
+    let str = format!("{}", &tb64);
     let parsed = JsTaggedBase64::tagged_base64_from(&str).unwrap();
 
     assert_eq!(&tb64, &parsed);
@@ -82,10 +81,8 @@ fn check_tb64(tag: &str, lit: &str) {
     // Do we get back the tag we supplied?
     assert_eq!(parsed.tag(), tag);
 
-    // Do we get back the base64 value we supplied?
-    assert_eq!(encode_config(parsed.value(), TB64_CONFIG), b64);
-    let bits = base64::decode_config(b64, TB64_CONFIG).unwrap();
-    assert!(is_equal(&parsed.value(), &bits));
+    // Do we get back the binary value we supplied?
+    assert!(is_equal(&parsed.value(), &value));
 }
 
 #[wasm_bindgen_test]
@@ -94,8 +91,9 @@ fn test_tagged_base64_from() {
     assert!(JsTaggedBase64::tagged_base64_from("").is_err());
 
     // The tag is alphanumeric with hyphen and underscore.
-    // The value here is the base64 encoding of foobar.
-    assert!(JsTaggedBase64::tagged_base64_from("-_~Zm9vYmFy").is_ok());
+    // The value here is the base64 encoding of foobar, but
+    // the encoding doesn't include the required checksum.
+    assert!(JsTaggedBase64::tagged_base64_from("-_~Zm9vYmFy").is_err());
 
     // A null value is allowed.
     let b64_null = encode_config("", TB64_CONFIG);
@@ -132,47 +130,47 @@ fn test_tagged_base64_from() {
     // but inadvertent whitespace could create confusion.
     assert!(JsTaggedBase64::tagged_base64_from("~").is_ok());
 
-    check_tb64("", "");
-    check_tb64("mytag", "mytag");
+    check_tb64("", b"");
+    check_tb64("mytag", b"mytag");
 
     // Only base64 characters are allowed in the tag. No restrictions on
     // the value because it will get base64 encoded.
     check_tb64(
         "abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789",
-        "~Yeah, we can have spaces and odd stuff—😀 here. ¯⧵_(ツ)_/¯",
+        "~Yeah, we can have spaces and odd stuff—😀 here. ¯⧵_(ツ)_/¯".as_bytes(),
     );
     check_tb64(
         "",
-        "abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789~",
+        b"abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789~",
     );
 
     // All the following have invalid characters in the tag.
-    assert!(JsTaggedBase64::make_tagged_base64("~", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("a~", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("~b", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("c~d", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("e~f~", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("g~h~i", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("Oh, no!", "").is_err());
-    assert!(JsTaggedBase64::make_tagged_base64("Σ", "").is_err());
+    assert!(JsTaggedBase64::new("~", b"").is_err());
+    assert!(JsTaggedBase64::new("a~", b"").is_err());
+    assert!(JsTaggedBase64::new("~b", b"").is_err());
+    assert!(JsTaggedBase64::new("c~d", b"").is_err());
+    assert!(JsTaggedBase64::new("e~f~", b"").is_err());
+    assert!(JsTaggedBase64::new("g~h~i", b"").is_err());
+    assert!(JsTaggedBase64::new("Oh, no!", b"").is_err());
+    assert!(JsTaggedBase64::new("Σ", b"").is_err());
 
     // Note, u128::MAX is 340282366920938463463374607431768211455
-    check_tb64("PK", &u128::MAX.to_string());
+    check_tb64("PK", &u128::MAX.to_string().as_bytes());
 
     // Is ten copies of u128::MAX a big enough test?
     let z = u128::MAX;
     check_tb64(
         "many-bits",
-        &format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z),
+        &format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z).as_bytes(),
     );
 
     // From https://tools.ietf.org/html/rfc4648
-    check_tb64("Zg", "f");
-    check_tb64("Zm8", "fo");
-    check_tb64("Zm9v", "foo");
-    check_tb64("Zm9vYg", "foob");
-    check_tb64("Zm9vYmE", "fooba");
-    check_tb64("Zm9vYmFy", "foobar");
+    check_tb64("Zg", b"f");
+    check_tb64("Zm8", b"fo");
+    check_tb64("Zm9v", b"foo");
+    check_tb64("Zm9vYg", b"foob");
+    check_tb64("Zm9vYmE", b"fooba");
+    check_tb64("Zm9vYmFy", b"foobar");
 }
 
 #[wasm_bindgen_test]

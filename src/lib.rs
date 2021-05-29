@@ -50,16 +50,47 @@ pub struct TaggedBase64 {
 }
 
 #[derive(Debug)]
-pub enum TB64Error {
+pub enum Tb64Error {
     /// An invalid character was found in the tag.
     InvalidTag,
+    /// Missing delimiter.
+    MissingDelimiter,
+    /// Missing checksum in value.
+    MissingChecksum,
     /// An invalid byte was found while decoding the base64-encoded value.
     /// The offset and offending byte are provided.
     InvalidByte(usize, u8),
+    /// The last non-padding input symbol's encoded 6 bits have
+    /// nonzero bits that will be discarded. This is indicative of
+    /// corrupted or truncated Base64. Unlike InvalidByte, which
+    /// reports symbols that aren't in the alphabet, this error is for
+    /// symbols that are in the alphabet but represent nonsensical
+    /// encodings.
+    InvalidLastSymbol(usize, u8),
     /// The length of the base64-encoded value is invalid.
     InvalidLength,
     /// The checksum did not match.
     InvalidChecksum,
+}
+
+impl fmt::Display for Tb64Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Tb64Error::InvalidTag =>
+                write!(f, "An invalid character was found in the tag."),
+            Tb64Error::MissingDelimiter =>
+                write!(f, "Missing delimiter ({}).", TB64_DELIM),
+            Tb64Error::MissingChecksum =>
+                write!(f, "Missing checksum in value."),
+            Tb64Error::InvalidByte(usize, u8) =>
+                write!(f, "An invalid byte ({:#0x}) was found at offset {} while decoding the base64-encoded value. The offset and offending byte are provided.", u8, usize),
+            Tb64Error::InvalidLastSymbol(offset, byte) => write!(f, "The last non-padding input symbol's encoded 6 bits have nonzero bits that will be discarded. This is indicative of corrupted or truncated Base64. Unlike InvalidByte, which reports symbols that aren't in the alphabet, this error is for symbols that are in the alphabet but represent nonsensical encodings. Invalid byte ({:#0x}) at offset {}.", byte, offset),
+            Tb64Error::InvalidLength =>
+                write!(f, "The length of the base64-encoded value is invalid."),
+            Tb64Error::InvalidChecksum =>
+                write!(f, "The checksum did not match."),
+        }
+    }
 }
 
 /// Separator that does not appear in URL-safe base64 encoding and can
@@ -115,7 +146,7 @@ impl TaggedBase64 {
     /// Constructs a TaggedBase64 from a tag and array of bytes. The tag
     /// must be URL-safe (alphanumeric with hyphen and underscore). The
     /// byte values are unconstrained.
-    pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, TB64Error> {
+    pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, Tb64Error> {
         if TaggedBase64::is_safe_base64_tag(tag) {
             let cs = TaggedBase64::calc_checksum(&tag, &value);
             Ok(TaggedBase64 {
@@ -124,7 +155,46 @@ impl TaggedBase64 {
                 checksum: cs,
             })
         } else {
-            Err(TB64Error::InvalidTag)
+            Err(Tb64Error::InvalidTag)
+        }
+    }
+
+    /// Parses a string of the form tag~value into a TaggedBase64 value.
+    ///
+    /// The tag is restricted to URL-safe base64 ASCII characters. The tag
+    /// may be empty. The delimiter is required.
+    ///
+    /// The value is a base64-encoded string, using the URL-safe character
+    /// set, and no padding is used.
+    pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, Tb64Error> {
+        // Would be convenient to use split_first() here. Alas, not stable yet.
+        let delim_pos = tb64.find(TB64_DELIM).ok_or(Tb64Error::MissingDelimiter)?;
+        let (tag, delim_b64) = tb64.split_at(delim_pos);
+
+        if !TaggedBase64::is_safe_base64_tag(tag) {
+            return Err(Tb64Error::InvalidTag);
+        }
+
+        // Remove the delimiter.
+        let mut iter = delim_b64.chars();
+        iter.next();
+        if iter.next() == None {
+            return Err(Tb64Error::MissingChecksum);
+        }
+        let value = iter.as_str();
+
+        // Base64 decode the value.
+        let bytes = TaggedBase64::decode_raw(value)?;
+        let cs = bytes[0];
+
+        if cs == TaggedBase64::calc_checksum(&tag, &bytes[1..]) {
+            Ok(TaggedBase64 {
+                tag: tag.to_string(),
+                value: bytes[1..].to_vec(),
+                checksum: cs,
+            })
+        } else {
+            Err(Tb64Error::InvalidChecksum)
         }
     }
 
@@ -186,13 +256,16 @@ impl TaggedBase64 {
     pub fn encode_raw(input: &[u8]) -> String {
         base64::encode_config(input, TB64_CONFIG)
     }
-
     /// Wraps the underlying base64 decoder.
-    // WASM doesn't support returning Result<Vec<u8>, base64::DecodeError>
-    pub fn decode_raw(value: &str) -> Result<Vec<u8>, JsValue> {
-        base64::decode_config(value, TB64_CONFIG).map_err(|err| to_jsvalue(err))
+    pub fn decode_raw(value: &str) -> Result<Vec<u8>, Tb64Error> {
+        base64::decode_config(value, TB64_CONFIG).map_err(|err| match err {
+            base64::DecodeError::InvalidByte(offset, byte) => Tb64Error::InvalidByte(offset, byte),
+            base64::DecodeError::InvalidLength => Tb64Error::InvalidLength,
+            base64::DecodeError::InvalidLastSymbol(offset, byte) => {
+                Tb64Error::InvalidLastSymbol(offset, byte)
+            }
+        })
     }
-    //}
 }
 
 /// Converts any object that supports the Display trait to a JsValue for
@@ -208,6 +281,12 @@ pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
 #[derive(Debug, Eq, PartialEq)]
 pub struct JsTaggedBase64 {
     tb64: TaggedBase64,
+}
+
+impl From<Tb64Error> for JsValue {
+    fn from(error: Tb64Error) -> JsValue {
+        to_jsvalue(format!("{}", error))
+    }
 }
 
 #[wasm_bindgen]
@@ -237,64 +316,7 @@ impl JsTaggedBase64 {
     /// The value is a base64-encoded string, using the URL-safe character
     /// set, and no padding is used.
     pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
-        // Would be convenient to use split_first() here. Alas, not stable yet.
-        let delim_pos = tb64
-            .find(TB64_DELIM)
-            .ok_or(to_jsvalue("Missing delimiter parsing TaggedBase64"))?;
-        let (tag, delim_b64) = tb64.split_at(delim_pos);
-
-        if !TaggedBase64::is_safe_base64_tag(tag) {
-            return Err(to_jsvalue(format!(
-            "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
-            tag
-        )));
-        }
-
-        // Remove the delimiter.
-        let mut iter = delim_b64.chars();
-        iter.next();
-        let value = iter.as_str();
-
-        // Base64 decode the value.
-        let bytes = TaggedBase64::decode_raw(value)?;
-        let cs = bytes[0];
-
-        if cs == TaggedBase64::calc_checksum(&tag, &bytes[1..]) {
-            Ok(TaggedBase64 {
-                tag: tag.to_string(),
-                value: bytes[1..].to_vec(),
-                checksum: cs,
-            })
-        } else {
-            Err(to_jsvalue("Invalid JsTaggedBase64 checksum"))
-        }
-    }
-
-    /// Constructs a TaggedBase64 from a tag string and a base64-encoded
-    /// value.
-    ///
-    /// The tag is restricted to URL-safe base64 ASCII characters. The tag
-    /// may be empty. The delimiter is required.  The value is a a
-    /// base64-encoded string, using the URL-safe character set, and no
-    /// padding is used.
-    pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValue> {
-        if !TaggedBase64::is_safe_base64_tag(tag) {
-            return Err(to_jsvalue(format!(
-            "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
-            tag
-        )));
-        }
-        let bytes = TaggedBase64::decode_raw(value)?;
-        let cs = bytes[0];
-
-        if cs == TaggedBase64::calc_checksum(&tag, &bytes[1..]) {
-            Ok(TaggedBase64 {
-                tag: tag.to_string(),
-                value: bytes[1..].to_vec(),
-                checksum: cs,
-            })
-        } else {
-            Err(to_jsvalue("Invalid JsTaggedBase64 checksum"))
-        }
+        let result = TaggedBase64::tagged_base64_from(tb64)?;
+        Ok(result)
     }
 }
