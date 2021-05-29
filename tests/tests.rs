@@ -73,9 +73,9 @@ fn test_is_equal() {
 /// - Accessors and parsed string match the supplied values
 fn check_tb64(tag: &str, lit: &str) {
     let b64 = encode_config(lit, TB64_CONFIG);
-    let tb64 = TaggedBase64::make_tagged_base64(tag, &b64).unwrap();
+    let tb64 = JsTaggedBase64::make_tagged_base64(tag, &b64).unwrap();
     let str = format!("{}{}{}", &tag, TB64_DELIM, &b64);
-    let parsed = TaggedBase64::tagged_base64_from(&str).unwrap();
+    let parsed = JsTaggedBase64::tagged_base64_from(&str).unwrap();
 
     assert_eq!(&tb64, &parsed);
 
@@ -91,23 +91,25 @@ fn check_tb64(tag: &str, lit: &str) {
 #[wasm_bindgen_test]
 fn test_tagged_base64_from() {
     // The empty string is not a valid TaggedBase64.
-    assert!(TaggedBase64::tagged_base64_from("").is_err());
+    assert!(JsTaggedBase64::tagged_base64_from("").is_err());
 
     // The tag is alphanumeric with hyphen and underscore.
     // The value here is the base64 encoding of foobar.
-    assert!(TaggedBase64::tagged_base64_from("-_~Zm9vYmFy").is_ok());
+    assert!(JsTaggedBase64::tagged_base64_from("-_~Zm9vYmFy").is_ok());
 
     // A null value is allowed.
     let b64_null = encode_config("", TB64_CONFIG);
     let tagged = format!("a~{}", &b64_null);
-    let short = TaggedBase64::tagged_base64_from(&tagged).unwrap();
+    let short = JsTaggedBase64::tagged_base64_from(&tagged).unwrap();
     assert_eq!(&short.tag(), "a");
     assert_eq!(short.value().len(), 0);
 
     let tagged2 = format!("abc~{}", encode_config("31415", TB64_CONFIG));
     assert_eq!(
         encode_config(
-            TaggedBase64::tagged_base64_from(&tagged2).unwrap().value(),
+            JsTaggedBase64::tagged_base64_from(&tagged2)
+                .unwrap()
+                .value(),
             TB64_CONFIG
         ),
         "MzE0MTU"
@@ -117,7 +119,9 @@ fn test_tagged_base64_from() {
     let tagged3 = format!("abc~{}", encode3);
     assert_eq!(
         encode_config(
-            TaggedBase64::tagged_base64_from(&tagged3).unwrap().value(),
+            JsTaggedBase64::tagged_base64_from(&tagged3)
+                .unwrap()
+                .value(),
             TB64_CONFIG
         ),
         encode3 // "Zm9vYmFy"
@@ -126,7 +130,7 @@ fn test_tagged_base64_from() {
     // Both the tag and the value can be empty.
     // TODO Should we prohibit this? It might be useful as a placeholder
     // but inadvertent whitespace could create confusion.
-    assert!(TaggedBase64::tagged_base64_from("~").is_ok());
+    assert!(JsTaggedBase64::tagged_base64_from("~").is_ok());
 
     check_tb64("", "");
     check_tb64("mytag", "mytag");
@@ -143,14 +147,14 @@ fn test_tagged_base64_from() {
     );
 
     // All the following have invalid characters in the tag.
-    assert!(TaggedBase64::make_tagged_base64("~", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("a~", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("~b", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("c~d", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("e~f~", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("g~h~i", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("Oh, no!", "").is_err());
-    assert!(TaggedBase64::make_tagged_base64("Σ", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("~", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("a~", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("~b", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("c~d", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("e~f~", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("g~h~i", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("Oh, no!", "").is_err());
+    assert!(JsTaggedBase64::make_tagged_base64("Σ", "").is_err());
 
     // Note, u128::MAX is 340282366920938463463374607431768211455
     check_tb64("PK", &u128::MAX.to_string());
@@ -175,5 +179,5 @@ fn test_tagged_base64_from() {
 fn test_tagged_base64_new() {
     let bv = u128::MAX.to_ne_bytes().to_vec();
     let tb = TaggedBase64::new("BIG", &bv);
-    assert!(is_equal(&tb.value(), &bv));
+    assert!(is_equal(&tb.unwrap().value(), &bv));
 }

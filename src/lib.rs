@@ -32,22 +32,34 @@
 //! Note: It is allowed for the tag or value to be the empty string. A
 //! lone delimiter can be parsed as a tagged base64 value.
 //!
-//! Note: There is no checksum incorporated in the base64 value. For many
-//! applications it would be wise to add this.
-//!
 //! Note: Integrating this with the Serde crate would be nice.
 
 use base64;
 use core::fmt;
 use core::fmt::Display;
+use crc_any::CRC;
 use wasm_bindgen::prelude::*;
 
 /// The tag string and the binary data.
 #[wasm_bindgen]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct TaggedBase64 {
     tag: String,
     value: Vec<u8>,
+    checksum: u8,
+}
+
+#[derive(Debug)]
+pub enum TB64Error {
+    /// An invalid character was found in the tag.
+    InvalidTag,
+    /// An invalid byte was found while decoding the base64-encoded value.
+    /// The offset and offending byte are provided.
+    InvalidByte(usize, u8),
+    /// The length of the base64-encoded value is invalid.
+    InvalidLength,
+    /// The checksum did not match.
+    InvalidChecksum,
 }
 
 /// Separator that does not appear in URL-safe base64 encoding and can
@@ -60,21 +72,25 @@ pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 /// Converts a TaggedBase64 value to a String.
 #[wasm_bindgen]
 pub fn to_string(tb64: &TaggedBase64) -> String {
+    let value = &mut tb64.value.clone();
+    value.push(TaggedBase64::calc_checksum(&tb64.tag, &tb64.value));
     format!(
         "{}{}{}",
         tb64.tag,
         TB64_DELIM,
-        TaggedBase64::encode_raw(&tb64.value)
+        TaggedBase64::encode_raw(value)
     )
 }
 
 impl From<&TaggedBase64> for String {
     fn from(tb64: &TaggedBase64) -> Self {
+        let value = &mut tb64.value.clone();
+        value.push(TaggedBase64::calc_checksum(&tb64.tag, &tb64.value));
         format!(
             "{}{}{}",
             tb64.tag,
             TB64_DELIM,
-            TaggedBase64::encode_raw(&tb64.value)
+            TaggedBase64::encode_raw(value)
         )
     }
 }
@@ -83,33 +99,44 @@ impl From<&TaggedBase64> for String {
 /// of the value, separated by a tilde (~).
 impl fmt::Display for TaggedBase64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let value = &mut self.value.clone();
+        value.push(TaggedBase64::calc_checksum(&self.tag, &self.value));
         write!(
             f,
             "{}{}{}",
             self.tag,
             TB64_DELIM,
-            TaggedBase64::encode_raw(&self.value)
+            TaggedBase64::encode_raw(value)
         )
     }
 }
 
-#[wasm_bindgen]
 impl TaggedBase64 {
     /// Constructs a TaggedBase64 from a tag and array of bytes. The tag
     /// must be URL-safe (alphanumeric with hyphen and underscore). The
     /// byte values are unconstrained.
-    #[wasm_bindgen(constructor)]
-    pub fn new(tag: &str, value: &[u8]) -> TaggedBase64 {
-        assert!(TaggedBase64::is_safe_base64_tag(tag));
-        TaggedBase64 {
-            tag: tag.to_string(),
-            value: value.to_vec(),
+    pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, TB64Error> {
+        if TaggedBase64::is_safe_base64_tag(tag) {
+            let cs = TaggedBase64::calc_checksum(&tag, &value);
+            Ok(TaggedBase64 {
+                tag: tag.to_string(),
+                value: value.to_vec(),
+                checksum: cs,
+            })
+        } else {
+            Err(TB64Error::InvalidTag)
         }
+    }
+
+    pub fn calc_checksum(tag: &str, value: &[u8]) -> u8 {
+        let mut crc8 = CRC::crc8();
+        crc8.digest(&tag.to_string());
+        crc8.digest(&value);
+        crc8.get_crc() as u8
     }
 
     /// Returns true for characters permitted in URL-safe base64 encoding,
     /// and false otherwise.
-    #[wasm_bindgen]
     pub fn is_safe_base64_ascii(c: char) -> bool {
         ('a'..='z').contains(&c)
             || ('A'..='Z').contains(&c)
@@ -122,7 +149,6 @@ impl TaggedBase64 {
     /// TaggedBase64. Because the tags are merely intended to be mnemonic,
     /// there's no need to support a large and visually ambiguous
     /// character set.
-    #[wasm_bindgen]
     pub fn is_safe_base64_tag(tag: &str) -> bool {
         tag.bytes()
             .skip_while(|b| TaggedBase64::is_safe_base64_ascii(*b as char))
@@ -131,26 +157,22 @@ impl TaggedBase64 {
     }
 
     /// Gets the tag of a TaggedBase64 instance.
-    #[wasm_bindgen(getter)]
     pub fn tag(&self) -> String {
         self.tag.clone()
     }
 
     /// Sets the tag of a TaggedBase64 instance.
-    #[wasm_bindgen(setter)]
     pub fn set_tag(&mut self, tag: &str) {
         assert!(TaggedBase64::is_safe_base64_tag(tag));
         self.tag = tag.to_string();
     }
 
     /// Gets the value of a TaggedBase64 instance.
-    #[wasm_bindgen(getter)]
     pub fn value(&self) -> Vec<u8> {
         self.value.clone()
     }
 
     /// Sets the value of a TaggedBase64 instance.
-    #[wasm_bindgen(setter)]
     pub fn set_value(&mut self, value: &[u8]) {
         self.value = value.to_vec();
     }
@@ -171,6 +193,41 @@ impl TaggedBase64 {
         base64::decode_config(value, TB64_CONFIG).map_err(|err| to_jsvalue(err))
     }
     //}
+}
+
+/// Converts any object that supports the Display trait to a JsValue for
+/// passing to Javascript.
+///
+/// Note: Type parameters aren't supported by `wasm-pack` yet so this
+/// can't be included in the TaggedBase64 type implementation.
+pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
+    JsValue::from_str(&format!("{}", d))
+}
+
+#[wasm_bindgen]
+#[derive(Debug, Eq, PartialEq)]
+pub struct JsTaggedBase64 {
+    tb64: TaggedBase64,
+}
+
+#[wasm_bindgen]
+impl JsTaggedBase64 {
+    #[wasm_bindgen(constructor)]
+    pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, JsValue> {
+        if TaggedBase64::is_safe_base64_tag(tag) {
+            let cs = TaggedBase64::calc_checksum(&tag, &value);
+            Ok(TaggedBase64 {
+                tag: tag.to_string(),
+                value: value.to_vec(),
+                checksum: cs,
+            })
+        } else {
+            Err(to_jsvalue(format!(
+            "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
+            tag
+        )))
+        }
+    }
 
     /// Parses a string of the form tag~value into a TaggedBase64 value.
     ///
@@ -179,7 +236,6 @@ impl TaggedBase64 {
     ///
     /// The value is a base64-encoded string, using the URL-safe character
     /// set, and no padding is used.
-    #[wasm_bindgen]
     pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
         // Would be convenient to use split_first() here. Alas, not stable yet.
         let delim_pos = tb64
@@ -201,11 +257,17 @@ impl TaggedBase64 {
 
         // Base64 decode the value.
         let bytes = TaggedBase64::decode_raw(value)?;
+        let cs = bytes[0];
 
-        Ok(TaggedBase64 {
-            tag: tag.to_string(),
-            value: bytes,
-        })
+        if cs == TaggedBase64::calc_checksum(&tag, &bytes[1..]) {
+            Ok(TaggedBase64 {
+                tag: tag.to_string(),
+                value: bytes[1..].to_vec(),
+                checksum: cs,
+            })
+        } else {
+            Err(to_jsvalue("Invalid JsTaggedBase64 checksum"))
+        }
     }
 
     /// Constructs a TaggedBase64 from a tag string and a base64-encoded
@@ -215,7 +277,6 @@ impl TaggedBase64 {
     /// may be empty. The delimiter is required.  The value is a a
     /// base64-encoded string, using the URL-safe character set, and no
     /// padding is used.
-    #[wasm_bindgen]
     pub fn make_tagged_base64(tag: &str, value: &str) -> Result<TaggedBase64, JsValue> {
         if !TaggedBase64::is_safe_base64_tag(tag) {
             return Err(to_jsvalue(format!(
@@ -223,18 +284,17 @@ impl TaggedBase64 {
             tag
         )));
         }
-        Ok(TaggedBase64 {
-            tag: tag.to_string(),
-            value: TaggedBase64::decode_raw(value)?,
-        })
-    }
-}
+        let bytes = TaggedBase64::decode_raw(value)?;
+        let cs = bytes[0];
 
-/// Converts any object that supports the Display trait to a JsValue for
-/// passing to Javascript.
-///
-/// Note: Type parameters aren't supported by `wasm-pack` yet so this
-/// can't be included in the TaggedBase64 type implementation.
-pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
-    JsValue::from_str(&format!("{}", d))
+        if cs == TaggedBase64::calc_checksum(&tag, &bytes[1..]) {
+            Ok(TaggedBase64 {
+                tag: tag.to_string(),
+                value: bytes[1..].to_vec(),
+                checksum: cs,
+            })
+        } else {
+            Err(to_jsvalue("Invalid JsTaggedBase64 checksum"))
+        }
+    }
 }
