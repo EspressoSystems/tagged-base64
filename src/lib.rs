@@ -82,8 +82,8 @@ impl fmt::Display for Tb64Error {
                 write!(f, "Missing delimiter ({}).", TB64_DELIM),
             Tb64Error::MissingChecksum =>
                 write!(f, "Missing checksum in value."),
-            Tb64Error::InvalidByte(usize, u8) =>
-                write!(f, "An invalid byte ({:#0x}) was found at offset {} while decoding the base64-encoded value. The offset and offending byte are provided.", u8, usize),
+            Tb64Error::InvalidByte(offset, byte) =>
+                write!(f, "An invalid byte ({:#0x}) was found at offset {} while decoding the base64-encoded value. The offset and offending byte are provided.", byte, offset),
             Tb64Error::InvalidLastSymbol(offset, byte) => write!(f, "The last non-padding input symbol's encoded 6 bits have nonzero bits that will be discarded. This is indicative of corrupted or truncated Base64. Unlike InvalidByte, which reports symbols that aren't in the alphabet, this error is for symbols that are in the alphabet but represent nonsensical encodings. Invalid byte ({:#0x}) at offset {}.", byte, offset),
             Tb64Error::InvalidLength =>
                 write!(f, "The length of the base64-encoded value is invalid."),
@@ -142,6 +142,18 @@ impl fmt::Display for TaggedBase64 {
     }
 }
 
+impl fmt::Display for JsTaggedBase64 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.tb64)
+    }
+}
+
+impl PartialEq<TaggedBase64> for JsTaggedBase64 {
+    fn eq(&self, other: &TaggedBase64) -> bool {
+        self.tb64 == *other
+    }
+}
+
 impl TaggedBase64 {
     /// Constructs a TaggedBase64 from a tag and array of bytes. The tag
     /// must be URL-safe (alphanumeric with hyphen and underscore). The
@@ -178,19 +190,23 @@ impl TaggedBase64 {
         // Remove the delimiter.
         let mut iter = delim_b64.chars();
         iter.next();
-        if iter.next() == None {
+        let value = iter.as_str();
+        if value.len() == 0 {
             return Err(Tb64Error::MissingChecksum);
         }
-        let value = iter.as_str();
+
+        // Note: 'printf' debugging is possible like this:
+        //    use web_sys;
+        //    web_sys::console::log_1(&format!("+ {}", &tb64).into());
 
         // Base64 decode the value.
         let bytes = TaggedBase64::decode_raw(value)?;
-        let cs = bytes[0];
-
-        if cs == TaggedBase64::calc_checksum(&tag, &bytes[1..]) {
+        let penultimate = bytes.len() - 1;
+        let cs = bytes[penultimate];
+        if cs == TaggedBase64::calc_checksum(&tag, &bytes[..penultimate]) {
             Ok(TaggedBase64 {
                 tag: tag.to_string(),
-                value: bytes[1..].to_vec(),
+                value: bytes[..penultimate].to_vec(),
                 checksum: cs,
             })
         } else {
@@ -292,19 +308,11 @@ impl From<Tb64Error> for JsValue {
 #[wasm_bindgen]
 impl JsTaggedBase64 {
     #[wasm_bindgen(constructor)]
-    pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, JsValue> {
-        if TaggedBase64::is_safe_base64_tag(tag) {
-            let cs = TaggedBase64::calc_checksum(&tag, &value);
-            Ok(TaggedBase64 {
-                tag: tag.to_string(),
-                value: value.to_vec(),
-                checksum: cs,
-            })
-        } else {
-            Err(to_jsvalue(format!(
-            "Only alphanumeric ASCII, underscore (_), and hyphen (-) are allowed in the tag ({})",
-            tag
-        )))
+    pub fn new(tag: &str, value: &[u8]) -> Result<JsTaggedBase64, JsValue> {
+        let result = TaggedBase64::new(tag, value);
+        match result {
+            Ok(tb) => Ok(JsTaggedBase64 { tb64: tb }),
+            Err(err) => Err(to_jsvalue(err)),
         }
     }
 

@@ -11,6 +11,8 @@ use std::str;
 
 use tagged_base64::*;
 
+extern crate web_sys;
+
 // Run tests like this
 //    wasm-pack test --headless --firefox --chrome
 // Probably --safari works, too, but I'm not on a Mac at the moment.
@@ -74,6 +76,9 @@ fn test_is_equal() {
 fn check_tb64(tag: &str, value: &[u8]) {
     let tb64 = JsTaggedBase64::new(tag, &value).unwrap();
     let str = format!("{}", &tb64);
+
+    web_sys::console::log_1(&format!("‡ {}", &str).into());
+
     let parsed = JsTaggedBase64::tagged_base64_from(&str).unwrap();
 
     assert_eq!(&tb64, &parsed);
@@ -95,42 +100,16 @@ fn test_tagged_base64_from() {
     // the encoding doesn't include the required checksum.
     assert!(JsTaggedBase64::tagged_base64_from("-_~Zm9vYmFy").is_err());
 
-    // A null value is allowed.
+    // A null value is not allowed.
     let b64_null = encode_config("", TB64_CONFIG);
     let tagged = format!("a~{}", &b64_null);
-    let short = JsTaggedBase64::tagged_base64_from(&tagged).unwrap();
-    assert_eq!(&short.tag(), "a");
-    assert_eq!(short.value().len(), 0);
+    assert!(JsTaggedBase64::tagged_base64_from(&tagged).is_err());
 
-    let tagged2 = format!("abc~{}", encode_config("31415", TB64_CONFIG));
-    assert_eq!(
-        encode_config(
-            JsTaggedBase64::tagged_base64_from(&tagged2)
-                .unwrap()
-                .value(),
-            TB64_CONFIG
-        ),
-        "MzE0MTU"
-    );
+    // The tag can be empty, but the value cannot because the value
+    // includes the checksum.
+    assert!(JsTaggedBase64::tagged_base64_from("~").is_err());
 
-    let encode3 = encode_config("foobar", TB64_CONFIG);
-    let tagged3 = format!("abc~{}", encode3);
-    assert_eq!(
-        encode_config(
-            JsTaggedBase64::tagged_base64_from(&tagged3)
-                .unwrap()
-                .value(),
-            TB64_CONFIG
-        ),
-        encode3 // "Zm9vYmFy"
-    );
-
-    // Both the tag and the value can be empty.
-    // TODO Should we prohibit this? It might be useful as a placeholder
-    // but inadvertent whitespace could create confusion.
-    assert!(JsTaggedBase64::tagged_base64_from("~").is_ok());
-
-    check_tb64("", b"");
+    //-check_tb64("", b"");
     check_tb64("mytag", b"mytag");
 
     // Only base64 characters are allowed in the tag. No restrictions on
