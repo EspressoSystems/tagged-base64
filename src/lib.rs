@@ -179,6 +179,10 @@ impl TaggedBase64 {
     /// Constructs a TaggedBase64 from a tag and array of bytes. The tag
     /// must be URL-safe (alphanumeric with hyphen and underscore). The
     /// byte values are unconstrained.
+    ///    ```ignored
+    ///    use TaggedBase64;
+    ///    let tb64 = TaggedBase64::new("TAG-YOURE-IT", b"datadatadata");
+    ///    ```
     pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, Tb64Error> {
         if TaggedBase64::is_safe_base64_tag(tag) {
             let cs = TaggedBase64::calc_checksum(&tag, &value);
