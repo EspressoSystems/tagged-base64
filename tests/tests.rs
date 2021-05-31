@@ -46,6 +46,16 @@ fn test_base64_sanity() {
 }
 
 #[wasm_bindgen_test]
+fn test_base64_wrappers() {
+    let x = b"abc123XYZ456";
+    let e = TaggedBase64::encode_raw(x);
+    assert_eq!(
+        TaggedBase64::decode_raw(&e).expect("base64 decode failed"),
+        x
+    );
+}
+
+#[wasm_bindgen_test]
 fn test_is_safe_base64_tag() {
     assert!(TaggedBase64::is_safe_base64_tag(""));
     assert!(!TaggedBase64::is_safe_base64_tag("~"));
@@ -67,6 +77,14 @@ fn test_is_equal() {
     assert!(!is_equal(&[1, 2, 4], &[1, 2, 4, 42]));
 }
 
+#[wasm_bindgen_test]
+fn test_display() {
+    let tb64 = TaggedBase64::new("T", b"123").unwrap();
+    let str: String = tb64.to_string();
+    let parsed: TaggedBase64 = TaggedBase64::parse(&str).unwrap();
+    assert_eq!(tb64, parsed);
+}
+
 /// Checks basic construction, printing, and parsing:
 /// - Can construct from a tag string and a binary value
 /// - Tag and value match the supplied values
@@ -77,9 +95,7 @@ fn check_tb64(tag: &str, value: &[u8]) {
     let tb64 = JsTaggedBase64::new(tag, &value).unwrap();
     let str = format!("{}", &tb64);
 
-    web_sys::console::log_1(&format!("‡ {}", &str).into());
-
-    let parsed = JsTaggedBase64::tagged_base64_from(&str).unwrap();
+    let parsed = JsTaggedBase64::parse(&str).unwrap();
 
     assert_eq!(&tb64, &parsed);
 
@@ -91,23 +107,23 @@ fn check_tb64(tag: &str, value: &[u8]) {
 }
 
 #[wasm_bindgen_test]
-fn test_tagged_base64_from() {
+fn test_tagged_base64_parse() {
     // The empty string is not a valid TaggedBase64.
-    assert!(JsTaggedBase64::tagged_base64_from("").is_err());
+    assert!(JsTaggedBase64::parse("").is_err());
 
     // The tag is alphanumeric with hyphen and underscore.
     // The value here is the base64 encoding of foobar, but
     // the encoding doesn't include the required checksum.
-    assert!(JsTaggedBase64::tagged_base64_from("-_~Zm9vYmFy").is_err());
+    assert!(JsTaggedBase64::parse("-_~Zm9vYmFy").is_err());
 
     // A null value is not allowed.
     let b64_null = encode_config("", TB64_CONFIG);
     let tagged = format!("a~{}", &b64_null);
-    assert!(JsTaggedBase64::tagged_base64_from(&tagged).is_err());
+    assert!(JsTaggedBase64::parse(&tagged).is_err());
 
     // The tag can be empty, but the value cannot because the value
     // includes the checksum.
-    assert!(JsTaggedBase64::tagged_base64_from("~").is_err());
+    assert!(JsTaggedBase64::parse("~").is_err());
 
     //-check_tb64("", b"");
     check_tb64("mytag", b"mytag");
@@ -157,4 +173,27 @@ fn test_tagged_base64_new() {
     let bv = u128::MAX.to_ne_bytes().to_vec();
     let tb = TaggedBase64::new("BIG", &bv);
     assert!(is_equal(&tb.unwrap().value(), &bv));
+}
+
+#[wasm_bindgen_test]
+fn test_tag_accessor() {
+    let tag = "Tag47";
+    let bits = b"Just some bits";
+    let tb64 = TaggedBase64::new(&tag, bits).unwrap();
+    assert_eq!(tb64.tag(), tag);
+    assert_eq!(tb64.value(), bits);
+
+    let jstb64 = JsTaggedBase64::new(&tag, bits).unwrap();
+    assert_eq!(jstb64.tag(), tag);
+    assert_eq!(jstb64.value(), bits);
+}
+
+#[wasm_bindgen_test]
+fn test_tag_setter() {
+    let tag = "Godzilla";
+    let bits = b"forest";
+    let mut tb64 = TaggedBase64::new("Bambi", bits).unwrap();
+    tb64.set_tag(tag);
+    assert_eq!(tb64.tag(), tag);
+    assert_eq!(tb64.value(), bits);
 }

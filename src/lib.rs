@@ -1,5 +1,4 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
-//
 
 //! User-oriented format for binary data. Tagged Base64 is intended to be
 //! used in user interfaces including URLs and text to be copied and
@@ -40,6 +39,13 @@ use core::fmt::Display;
 use crc_any::CRC;
 use wasm_bindgen::prelude::*;
 
+/// Separator that does not appear in URL-safe base64 encoding and can
+/// appear in URLs without percent-encoding.
+pub const TB64_DELIM: char = '~';
+
+/// Uses '-' and '_' as the 63rd and 64th characters. Does not use padding.
+pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
+
 /// The tag string and the binary data.
 #[wasm_bindgen]
 #[derive(Debug, Eq, PartialEq)]
@@ -47,6 +53,16 @@ pub struct TaggedBase64 {
     tag: String,
     value: Vec<u8>,
     checksum: u8,
+}
+
+/// JavaScript-compatible wrapper for TaggedBase64
+///
+/// The primary difference is that JsTaggedBase64 returns errors
+/// of type JsValue.
+#[wasm_bindgen]
+#[derive(Debug, Eq, PartialEq)]
+pub struct JsTaggedBase64 {
+    tb64: TaggedBase64,
 }
 
 #[derive(Debug)]
@@ -93,13 +109,6 @@ impl fmt::Display for Tb64Error {
     }
 }
 
-/// Separator that does not appear in URL-safe base64 encoding and can
-/// appear in URLs without percent-encoding.
-pub const TB64_DELIM: char = '~';
-
-/// Uses '-' and '_' as the 63rd and 64th characters. Does not use padding.
-pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
-
 /// Converts a TaggedBase64 value to a String.
 #[wasm_bindgen]
 pub fn to_string(tb64: &TaggedBase64) -> String {
@@ -126,8 +135,9 @@ impl From<&TaggedBase64> for String {
     }
 }
 
-/// Produces a string by concatenating the tag and the base64 encoding
-/// of the value, separated by a tilde (~).
+/// Produces the string of a TaggedBase64 value by concatenating the
+/// tag, a delimeter, and the base64 encoding of the value and
+/// checksum.
 impl fmt::Display for TaggedBase64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let value = &mut self.value.clone();
@@ -142,6 +152,9 @@ impl fmt::Display for TaggedBase64 {
     }
 }
 
+/// Produces the string of a TaggedBase64 value by concatenating the
+/// tag, a delimeter, and the base64 encoding of the value and
+/// checksum.
 impl fmt::Display for JsTaggedBase64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.tb64)
@@ -178,7 +191,7 @@ impl TaggedBase64 {
     ///
     /// The value is a base64-encoded string, using the URL-safe character
     /// set, and no padding is used.
-    pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, Tb64Error> {
+    pub fn parse(tb64: &str) -> Result<TaggedBase64, Tb64Error> {
         // Would be convenient to use split_first() here. Alas, not stable yet.
         let delim_pos = tb64.find(TB64_DELIM).ok_or(Tb64Error::MissingDelimiter)?;
         let (tag, delim_b64) = tb64.split_at(delim_pos);
@@ -214,7 +227,7 @@ impl TaggedBase64 {
         }
     }
 
-    pub fn calc_checksum(tag: &str, value: &[u8]) -> u8 {
+    fn calc_checksum(tag: &str, value: &[u8]) -> u8 {
         let mut crc8 = CRC::crc8();
         crc8.digest(&tag.to_string());
         crc8.digest(&value);
@@ -251,6 +264,7 @@ impl TaggedBase64 {
     pub fn set_tag(&mut self, tag: &str) {
         assert!(TaggedBase64::is_safe_base64_tag(tag));
         self.tag = tag.to_string();
+        self.checksum = TaggedBase64::calc_checksum(&self.tag, &self.value);
     }
 
     /// Gets the value of a TaggedBase64 instance.
@@ -261,6 +275,7 @@ impl TaggedBase64 {
     /// Sets the value of a TaggedBase64 instance.
     pub fn set_value(&mut self, value: &[u8]) {
         self.value = value.to_vec();
+        self.checksum = TaggedBase64::calc_checksum(&self.tag, &self.value);
     }
 
     /// Wraps the underlying base64 encoder.
@@ -293,12 +308,6 @@ pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
     JsValue::from_str(&format!("{}", d))
 }
 
-#[wasm_bindgen]
-#[derive(Debug, Eq, PartialEq)]
-pub struct JsTaggedBase64 {
-    tb64: TaggedBase64,
-}
-
 impl From<Tb64Error> for JsValue {
     fn from(error: Tb64Error) -> JsValue {
         to_jsvalue(format!("{}", error))
@@ -323,8 +332,28 @@ impl JsTaggedBase64 {
     ///
     /// The value is a base64-encoded string, using the URL-safe character
     /// set, and no padding is used.
-    pub fn tagged_base64_from(tb64: &str) -> Result<TaggedBase64, JsValue> {
-        let result = TaggedBase64::tagged_base64_from(tb64)?;
+    pub fn parse(tb64: &str) -> Result<TaggedBase64, JsValue> {
+        let result = TaggedBase64::parse(tb64)?;
         Ok(result)
+    }
+
+    /// Gets the tag of a TaggedBase64 instance.
+    pub fn tag(&self) -> String {
+        TaggedBase64::tag(&self.tb64)
+    }
+
+    /// Gets the value of a TaggedBase64 instance.
+    pub fn value(&self) -> Vec<u8> {
+        TaggedBase64::value(&self.tb64)
+    }
+
+    /// Sets the tag of a JsTaggedBase64 instance.
+    pub fn set_tag(&mut self, tag: &str) {
+        self.tb64.set_tag(tag);
+    }
+
+    /// Sets the value of a JsTaggedBase64 instance.
+    pub fn set_value(&mut self, value: &[u8]) {
+        self.tb64.set_value(value);
     }
 }
