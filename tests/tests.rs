@@ -4,14 +4,11 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use wasm_bindgen_test::*;
-
 use base64::{decode_config, encode_config};
 use std::str;
-
 use tagged_base64::*;
-
-extern crate web_sys;
+use wasm_bindgen_test::*;
+use web_sys;
 
 // Run tests like this
 //    wasm-pack test --headless --firefox --chrome
@@ -95,6 +92,8 @@ fn check_tb64(tag: &str, value: &[u8]) {
     let tb64 = JsTaggedBase64::new(tag, &value).unwrap();
     let str = format!("{}", &tb64);
 
+    // web_sys::console::log_1(&format!("{}", &tb64).into());
+
     let parsed = JsTaggedBase64::parse(&str).unwrap();
 
     assert_eq!(&tb64, &parsed);
@@ -158,6 +157,9 @@ fn test_tagged_base64_parse() {
         "many-bits",
         &format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z).as_bytes(),
     );
+
+    check_tb64("TX", b"transaction identifier goes here");
+    check_tb64("KEY", b"public key bits");
 
     // From https://tools.ietf.org/html/rfc4648
     check_tb64("Zg", b"f");

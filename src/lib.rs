@@ -22,8 +22,10 @@
 //! transaction id or a ledger address, etc.
 //!
 //! For example,
-//!    TX~Zm9vYmFy
-//!    LA~MzE0MTU
+//!    KEY~cHVibGljIGtleSBiaXRzBQ
+//!    TX~dHJhbnNhY3Rpb24gaWRlbnRpZmllciBnb2VzIGhlcmUC
+//!    Zg~Zgg
+//!    mytag~bXl0YWd7
 //!
 //! Like the base64 value, the tag is also restricted to the URL-safe
 //! base64 character set.
@@ -85,7 +87,7 @@ pub enum Tb64Error {
     InvalidLastSymbol(usize, u8),
     /// The length of the base64-encoded value is invalid.
     InvalidLength,
-    /// The checksum did not match.
+    /// The checksum was truncated or did not match.
     InvalidChecksum,
 }
 
@@ -104,7 +106,7 @@ impl fmt::Display for Tb64Error {
             Tb64Error::InvalidLength =>
                 write!(f, "The length of the base64-encoded value is invalid."),
             Tb64Error::InvalidChecksum =>
-                write!(f, "The checksum did not match."),
+                write!(f, "The checksum was truncated or did not match."),
         }
     }
 }

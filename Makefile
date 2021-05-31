@@ -12,4 +12,5 @@ check:
 
 .PHONY: test
 test:
+	cargo test
 	wasm-pack test --headless --firefox --chrome
