@@ -1,19 +1,11 @@
 // Copyright © 2021 Translucence Research, Inc. All rights reserved.
 
-//! User-oriented format for binary data. Tagged Base64 is intended to be
-//! used in user interfaces including URLs and text to be copied and
-//! pasted without the need for additional encoding, such as quoting or
-//! escape sequences.
-//!
-//! Large binary values don't fit nicely into JavaScript numbers due to
-//! range and representation. JavaScript numbers are represented as 64-bit
-//! floating point numbers. This means that the largest unsigned integer
-//! that can be represented is 2^53 - 1. Moreover, it is very easy to
-//! accidentally coerce a string that looks like a number into a
-//! JavaScript number, thus running the risk of loss of precision, which
-//! is corruption.  Therefore, values are encoded in base64 to allow safe
-//! transit to- and from JavaScript, including in URLs, as well as display
-//! and input in a user interface.
+//! User-oriented format for binary data. Tagged Base64 is intended to
+//! be used in user interfaces including URLs and text to be copied
+//! and pasted without the need for additional encoding, such as
+//! quoting or escape sequences. A checksum is included so that common
+//! problems such as inadvertent deletions or typos can be caught
+//! without knowing the structure of the binary data.
 //!
 //! To further reduce confusion, the values are prefixed with a tag
 //! intended to disambiguate usage. Although not necessary for
@@ -22,18 +14,31 @@
 //! transaction id or a ledger address, etc.
 //!
 //! For example,
+//! ```text
 //!    KEY~cHVibGljIGtleSBiaXRzBQ
 //!    TX~dHJhbnNhY3Rpb24gaWRlbnRpZmllciBnb2VzIGhlcmUC
 //!    Zg~Zgg
 //!    mytag~bXl0YWd7
+//! ```
 //!
 //! Like the base64 value, the tag is also restricted to the URL-safe
 //! base64 character set.
 //!
-//! Note: It is allowed for the tag or value to be the empty string. A
-//! lone delimiter can be parsed as a tagged base64 value.
+//! Note: It is allowed for the tag to be the empty string. The base64
+//! portion cannot be empty; at a minimum, it will encode a single
+//! byte checksum.
 //!
-//! Note: Integrating this with the Serde crate would be nice.
+//! The tag and delimiter help to avoid problems with binary values
+//! that happen to parse as numbers. Large binary values don't fit
+//! nicely into JavaScript numbers due to range and
+//! representation. JavaScript numbers are represented as 64-bit
+//! floating point numbers. This means that the largest unsigned
+//! integer that can be represented is 2^53 - 1. Moreover, it is very
+//! easy to accidentally coerce a string that looks like a number into
+//! a JavaScript number, thus running the risk of loss of precision,
+//! which is corruption.  Therefore, values are encoded in base64 to
+//! allow safe transit to- and from JavaScript, including in URLs, as
+//! well as display and input in a user interface.
 
 use base64;
 use core::fmt;
@@ -48,7 +53,8 @@ pub const TB64_DELIM: char = '~';
 /// Uses '-' and '_' as the 63rd and 64th characters. Does not use padding.
 pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 
-/// The tag string and the binary data.
+/// A structure holding a string tag, vector of bytes, and a checksum
+/// covering the tag and the bytes.
 #[wasm_bindgen]
 #[derive(Debug, Eq, PartialEq)]
 pub struct TaggedBase64 {
