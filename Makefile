@@ -14,3 +14,7 @@ check:
 test:
 	cargo test
 	wasm-pack test --headless --firefox --chrome
+
+.PHONY: doc
+doc:
+	cargo doc --no-deps
