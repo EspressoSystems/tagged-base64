@@ -33,6 +33,8 @@ base64 character set.
 
 **Note:** In addition to the typical Rust development tools, `wasm-pack` is needed. The Makefile includes a `setup` target to install `wasm-pack`.
 
+**Note:** The Wasm tests require [Firefox](https://www.mozilla.org/en-US/firefox/new/) and [Chrome](https://www.google.com/chrome/) to be installed.
+
 # TODO
 
 - [ ] Serde crate integration
