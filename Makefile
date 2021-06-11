@@ -18,3 +18,7 @@ test:
 .PHONY: doc
 doc:
 	cargo doc --no-deps
+
+.PHONY: setup
+setup:
+	curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
