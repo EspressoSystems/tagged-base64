@@ -22,8 +22,10 @@ usage hint enabling them to see at a glance whether something is a
 transaction id or a ledger address, etc.
 
 For example,
-    TX~Zm9vYmFy
-    LA~MzE0MTU
+
+    `TX~Zm9vYmFy`
+
+    `LA~MzE0MTU`
 
 Like the base64 value, the tag is also restricted to the URL-safe
 base64 character set.
@@ -33,4 +35,5 @@ base64 character set.
 **Note:** In addition to the typical Rust development tools, `wasm-pack` is needed. The Makefile includes a `setup` target to install `wasm-pack`.
 
 # TODO
-[ ] Serde crate integration
+
+- [ ] Serde crate integration
