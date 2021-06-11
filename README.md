@@ -22,16 +22,15 @@ usage hint enabling them to see at a glance whether something is a
 transaction id or a ledger address, etc.
 
 For example,
-   TX~Zm9vYmFy
-   LA~MzE0MTU
+    TX~Zm9vYmFy
+    LA~MzE0MTU
 
 Like the base64 value, the tag is also restricted to the URL-safe
 base64 character set.
 
-Note: it is allowed for the tag or value to be the empty string. A
-lone delimiter can be parsed as a tagged base64 value.
+**Note:** The tag may be omitted, but the base64 value cannot because it contains a checksum.
 
-Note: there is no checksum incorporated in the base64 value. For many
-applications it would be wise to add this.
+**Note:** In addition to the typical Rust development tools, `wasm-pack` is needed. The Makefile includes a `setup` target to install `wasm-pack`.
 
-Note: integrating this with the Serde crate would be nice.
+# TODO
+[ ] Serde crate integration
