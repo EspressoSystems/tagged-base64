@@ -199,3 +199,15 @@ fn test_tag_setter() {
     assert_eq!(tb64.tag(), tag);
     assert_eq!(tb64.value(), bits);
 }
+
+#[wasm_bindgen_test]
+fn test_empty_value() {
+    let t = TaggedBase64::new("TAG", b"").unwrap();
+    assert_eq!(t.tag(), "TAG");
+    assert_eq!(t.value(), b"");
+    assert_eq!(TaggedBase64::parse("TAG~Ew").unwrap(), t);
+    assert_eq!(
+        TaggedBase64::parse("A~wA").unwrap(),
+        TaggedBase64::new("A", b"").unwrap()
+    );
+}
