@@ -40,7 +40,6 @@
 //! allow safe transit to- and from JavaScript, including in URLs, as
 //! well as display and input in a user interface.
 
-use base64;
 use core::fmt;
 use core::fmt::Display;
 use crc_any::CRC;
@@ -216,7 +215,7 @@ impl TaggedBase64 {
         let mut iter = delim_b64.chars();
         iter.next();
         let value = iter.as_str();
-        if value.len() == 0 {
+        if value.is_empty() {
             return Err(Tb64Error::MissingChecksum);
         }
 
@@ -261,10 +260,7 @@ impl TaggedBase64 {
     /// there's no need to support a large and visually ambiguous
     /// character set.
     pub fn is_safe_base64_tag(tag: &str) -> bool {
-        tag.bytes()
-            .skip_while(|b| TaggedBase64::is_safe_base64_ascii(*b as char))
-            .next()
-            .is_none()
+        tag.chars().all(TaggedBase64::is_safe_base64_ascii)
     }
 
     /// Gets the tag of a TaggedBase64 instance.
