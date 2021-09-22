@@ -55,7 +55,7 @@ pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 /// A structure holding a string tag, vector of bytes, and a checksum
 /// covering the tag and the bytes.
 #[wasm_bindgen]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TaggedBase64 {
     tag: String,
     value: Vec<u8>,
@@ -67,7 +67,7 @@ pub struct TaggedBase64 {
 /// The primary difference is that JsTaggedBase64 returns errors
 /// of type JsValue.
 #[wasm_bindgen]
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JsTaggedBase64 {
     tb64: TaggedBase64,
 }
