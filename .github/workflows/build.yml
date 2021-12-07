@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 1'
+
+jobs:
+  build:
+    runs-on: self-hosted
+    container:
+      image: rust:buster
+    steps:
+      - name: Install firefox-esr
+        run: apt-get update && apt-get install -y firefox-esr && rm -rf /var/lib/apt/lists/*
+
+      - uses: actions/checkout@v2
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v1
+        name: Enable Rust Caching
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Build
+        run: cargo build
+
+      - name: Test
+        run: cargo test
