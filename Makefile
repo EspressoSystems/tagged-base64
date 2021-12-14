@@ -5,6 +5,11 @@ build:
 	cargo build --release
 	wasm-pack build
 
+.PHONY: clean
+clean:
+	cargo clean
+	cargo clean --release
+
 .PHONY: check
 check:
 	cargo check
@@ -12,7 +17,7 @@ check:
 
 .PHONY: test
 test:
-	cargo test
+	cargo test --release
 	wasm-pack test --headless --firefox --chrome
 
 .PHONY: doc
