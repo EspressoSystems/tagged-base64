@@ -124,7 +124,6 @@ fn test_tagged_base64_parse() {
     // includes the checksum.
     assert!(JsTaggedBase64::parse("~").is_err());
 
-    //-check_tb64("", b"");
     check_tb64("mytag", b"mytag");
 
     // Only base64 characters are allowed in the tag. No restrictions on
