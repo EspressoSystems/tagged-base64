@@ -2,20 +2,25 @@ name: Build
 
 on:
   push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
   schedule:
     - cron: '0 0 * * 1'
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: self-hosted
     container:
-      image: rust:buster
+      image: registry.gitlab.com/asuran-rs/containers/rust-sccache-docker:1.56
     steps:
+      - uses: styfle/cancel-workflow-action@0.9.1
+        name: Cancel Outdated Builds
+        with:
+          all_but_latest: true
+          access_token: ${{ github.token }}
+
       - name: Install firefox-esr
         run: apt-get update && apt-get install -y firefox-esr && rm -rf /var/lib/apt/lists/*
 
@@ -25,11 +30,32 @@ jobs:
       - uses: Swatinem/rust-cache@v1
         name: Enable Rust Caching
 
-      - name: Install wasm-pack
-        run: cargo install wasm-pack
+      - name: Install wasm-pack binary
+        run: |
+          wget -O wasm.tar.gz https://github.com/rustwasm/wasm-pack/releases/download/v0.10.2/wasm-pack-v0.10.2-x86_64-unknown-linux-musl.tar.gz
+          tar -xvf wasm.tar.gz
+          mv wasm*/wasm-pack /usr/bin/
 
-      - name: Build
+      - name: Disable cargo options
+        # delete cargo config so default linker is used
+        run: rm /opt/.cargo/config
+
+      - name: Clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ github.token }}
+
+      - name: Audit
+        uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ github.token }}
+
+      - name: Cargo Build
         run: cargo build
 
-      - name: Test
-        run: cargo test
+      - name: Cargo Test
+        run: cargo test --verbose -- -Zunstable-options --report-time
+
+      - name: Web Test
+        # $HOME has to match running user (root)
+        run: HOME=/root wasm-pack test --headless --firefox
