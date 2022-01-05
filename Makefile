@@ -1,4 +1,4 @@
-# Copyright © 2021 Translucence Research, Inc. All rights reserved.
+# Copyright © 2022 Translucence Research, Inc. All rights reserved.
 
 .PHONY: build
 build:

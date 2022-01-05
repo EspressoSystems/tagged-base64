@@ -1,4 +1,4 @@
-// Copyright © 2021 Translucence Research, Inc. All rights reserved.
+// Copyright © 2022 Translucence Research, Inc. All rights reserved.
 
 //! User-oriented format for binary data. Tagged Base64 is intended to
 //! be used in user interfaces including URLs and text to be copied
