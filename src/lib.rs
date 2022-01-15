@@ -184,7 +184,7 @@ impl TaggedBase64 {
     ///    ```
     pub fn new(tag: &str, value: &[u8]) -> Result<TaggedBase64, Tb64Error> {
         if TaggedBase64::is_safe_base64_tag(tag) {
-            let cs = TaggedBase64::calc_checksum(&tag, &value);
+            let cs = TaggedBase64::calc_checksum(tag, value);
             Ok(TaggedBase64 {
                 tag: tag.to_string(),
                 value: value.to_vec(),
@@ -227,7 +227,7 @@ impl TaggedBase64 {
         let bytes = TaggedBase64::decode_raw(value)?;
         let penultimate = bytes.len() - 1;
         let cs = bytes[penultimate];
-        if cs == TaggedBase64::calc_checksum(&tag, &bytes[..penultimate]) {
+        if cs == TaggedBase64::calc_checksum(tag, &bytes[..penultimate]) {
             Ok(TaggedBase64 {
                 tag: tag.to_string(),
                 value: bytes[..penultimate].to_vec(),
@@ -240,7 +240,7 @@ impl TaggedBase64 {
 
     fn calc_checksum(tag: &str, value: &[u8]) -> u8 {
         let mut crc8 = CRC::crc8();
-        crc8.digest(&tag.to_string());
+        crc8.digest(&tag);
         crc8.digest(&value);
         crc8.get_crc() as u8
     }
