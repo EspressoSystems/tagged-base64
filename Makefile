@@ -30,7 +30,7 @@ coverage: export RUSTUP_TOOLCHAIN=nightly
 coverage: export LLVM_PROFILE_FILE=grcov-%p-%m.profraw
 coverage: export RUSTFLAGS=-Zinstrument-coverage
 coverage:
-	rm -rf ./target grcov-*.profraw default.profraw
+	rm -rf grcov-*.profraw default.profraw
 	cargo test
 	grcov .                                \
 	    --binary-path ./target/debug/      \
