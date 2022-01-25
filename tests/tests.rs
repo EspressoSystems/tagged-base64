@@ -1,15 +1,13 @@
 // Copyright © 2022 Translucence Research, Inc. All rights reserved.
 
-//! Test suite for the Web and headless browsers.
-
-#![cfg(target_arch = "wasm32")]
-
 use base64::{decode_config, encode_config};
 use std::str;
 use tagged_base64::*;
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen_test::*;
 
-// Run tests like this
+// Run WASM tests like this
 //    wasm-pack test --headless --firefox --chrome
 // Probably --safari works, too, but I'm not on a Mac at the moment.
 //
@@ -18,6 +16,7 @@ use wasm_bindgen_test::*;
 //
 // Comment this out to run tests in Node.js.
 //    wasm-pack test --node
+#[cfg(target_arch = "wasm32")]
 wasm_bindgen_test_configure!(run_in_browser);
 
 /// Performs a brief sanity check on the base64 crate. Inspired by the
@@ -27,8 +26,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 /// Checks the following
 /// - Round trip correctness for a simple string
 /// - The base64 encoding of the empty string is the empty string.
-#[wasm_bindgen_test]
-fn test_base64_sanity() {
+fn base64_sanity() {
     let hello = b"hello rustaceans";
     let encoded = encode_config(hello, TB64_CONFIG);
     let decoded = decode_config(&encoded, TB64_CONFIG).unwrap();
@@ -41,8 +39,18 @@ fn test_base64_sanity() {
     assert_eq!(decode_config("", TB64_CONFIG).unwrap().len(), 0);
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_base64_wrappers() {
+fn wasm_base64_sanity() {
+    base64_sanity();
+}
+
+#[test]
+fn test_base64_sanity() {
+    base64_sanity();
+}
+
+fn base64_wrappers() {
     let x = b"abc123XYZ456";
     let e = TaggedBase64::encode_raw(x);
     assert_eq!(
@@ -51,12 +59,33 @@ fn test_base64_wrappers() {
     );
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_is_safe_base64_tag() {
+fn wasm_base64_wrappers() {
+    base64_wrappers();
+}
+
+#[test]
+fn test_base64_wrappers() {
+    base64_wrappers();
+}
+
+fn is_safe_base64_tag() {
     assert!(TaggedBase64::is_safe_base64_tag(""));
     assert!(!TaggedBase64::is_safe_base64_tag("~"));
     assert!(!TaggedBase64::is_safe_base64_tag("T~"));
     assert!(!TaggedBase64::is_safe_base64_tag("T~a"));
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+fn wasm_is_safe_base64_tag() {
+    is_safe_base64_tag();
+}
+
+#[test]
+fn test_is_safe_base64_tag() {
+    is_safe_base64_tag();
 }
 
 /// Compares to vectors of u8 for equality.
@@ -65,20 +94,42 @@ fn is_equal(va: &[u8], vb: &[u8]) -> bool {
 }
 
 /// Rust n00b paranoia. Does my vector equality predicate work?
-#[wasm_bindgen_test]
-fn test_is_equal() {
+fn is_equal_tester() {
     assert!(is_equal(&[], &[]));
     assert!(!is_equal(&[1], &[2]));
     assert!(is_equal(&[1, 2, 4], &[1, 2, 4]));
     assert!(!is_equal(&[1, 2, 4], &[1, 2, 4, 42]));
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_display() {
+fn wasm_is_equal() {
+    is_equal_tester();
+}
+
+#[test]
+fn test_is_equal() {
+    is_equal_tester();
+}
+
+fn display() {
     let tb64 = TaggedBase64::new("T", b"123").unwrap();
     let str: String = tb64.to_string();
     let parsed: TaggedBase64 = TaggedBase64::parse(&str).unwrap();
     assert_eq!(tb64, parsed);
+    let from_tb64 = String::from(&tb64);
+    assert_eq!(str, from_tb64)
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+fn wasm_display() {
+    display();
+}
+
+#[test]
+fn test_display() {
+    display();
 }
 
 /// Checks basic construction, printing, and parsing:
@@ -88,7 +139,7 @@ fn test_display() {
 /// - Generated string can be parsed
 /// - Accessors and parsed string match the supplied values
 fn check_tb64(tag: &str, value: &[u8]) {
-    let tb64 = JsTaggedBase64::new(tag, &value).unwrap();
+    let mut tb64 = JsTaggedBase64::new(tag, &value).unwrap();
     let str = format!("{}", &tb64);
 
     // use web_sys;
@@ -103,26 +154,36 @@ fn check_tb64(tag: &str, value: &[u8]) {
 
     // Do we get back the binary value we supplied?
     assert!(is_equal(&parsed.value(), &value));
+
+    // If we change the tag, do we get back the new tag?
+    tb64.set_tag("foo");
+    assert_eq!(tb64.tag(), "foo");
+
+    // If we change the value, do we get back the new value?
+    tb64.set_value(b"bar");
+    assert_eq!(tb64.value(), b"bar");
 }
 
-#[wasm_bindgen_test]
-fn test_tagged_base64_parse() {
+fn tagged_base64_parse() {
     // The empty string is not a valid TaggedBase64.
-    assert!(JsTaggedBase64::parse("").is_err());
+    assert!(TaggedBase64::parse("").is_err());
 
     // The tag is alphanumeric with hyphen and underscore.
     // The value here is the base64 encoding of foobar, but
     // the encoding doesn't include the required checksum.
-    assert!(JsTaggedBase64::parse("-_~Zm9vYmFy").is_err());
+    assert!(TaggedBase64::parse("-_~Zm9vYmFy").is_err());
+
+    // An invalid tag should err.
+    assert!(TaggedBase64::parse("&_~wA").is_err());
 
     // A null value is not allowed.
     let b64_null = encode_config("", TB64_CONFIG);
     let tagged = format!("a~{}", &b64_null);
-    assert!(JsTaggedBase64::parse(&tagged).is_err());
+    assert!(TaggedBase64::parse(&tagged).is_err());
 
     // The tag can be empty, but the value cannot because the value
     // includes the checksum.
-    assert!(JsTaggedBase64::parse("~").is_err());
+    assert!(TaggedBase64::parse("~").is_err());
 
     check_tb64("mytag", b"mytag");
 
@@ -138,14 +199,14 @@ fn test_tagged_base64_parse() {
     );
 
     // All the following have invalid characters in the tag.
-    assert!(JsTaggedBase64::new("~", b"").is_err());
-    assert!(JsTaggedBase64::new("a~", b"").is_err());
-    assert!(JsTaggedBase64::new("~b", b"").is_err());
-    assert!(JsTaggedBase64::new("c~d", b"").is_err());
-    assert!(JsTaggedBase64::new("e~f~", b"").is_err());
-    assert!(JsTaggedBase64::new("g~h~i", b"").is_err());
-    assert!(JsTaggedBase64::new("Oh, no!", b"").is_err());
-    assert!(JsTaggedBase64::new("Σ", b"").is_err());
+    assert!(TaggedBase64::new("~", b"").is_err());
+    assert!(TaggedBase64::new("a~", b"").is_err());
+    assert!(TaggedBase64::new("~b", b"").is_err());
+    assert!(TaggedBase64::new("c~d", b"").is_err());
+    assert!(TaggedBase64::new("e~f~", b"").is_err());
+    assert!(TaggedBase64::new("g~h~i", b"").is_err());
+    assert!(TaggedBase64::new("Oh, no!", b"").is_err());
+    assert!(TaggedBase64::new("Σ", b"").is_err());
 
     // Note, u128::MAX is 340282366920938463463374607431768211455
     check_tb64("PK", &u128::MAX.to_string().as_bytes());
@@ -169,15 +230,35 @@ fn test_tagged_base64_parse() {
     check_tb64("Zm9vYmFy", b"foobar");
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_tagged_base64_new() {
+fn wasm_tagged_base64_parse() {
+    tagged_base64_parse();
+}
+
+#[test]
+fn test_tagged_base64_parse() {
+    tagged_base64_parse();
+}
+
+fn tagged_base64_new_tester() {
     let bv = u128::MAX.to_ne_bytes().to_vec();
     let tb = TaggedBase64::new("BIG", &bv);
     assert!(is_equal(&tb.unwrap().value(), &bv));
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_tag_accessor() {
+fn wasm_tagged_base64_new() {
+    tagged_base64_new_tester();
+}
+
+#[test]
+fn test_tagged_base64_new() {
+    tagged_base64_new_tester();
+}
+
+fn tag_accessor() {
     let tag = "Tag47";
     let bits = b"Just some bits";
     let tb64 = TaggedBase64::new(&tag, bits).unwrap();
@@ -189,8 +270,18 @@ fn test_tag_accessor() {
     assert_eq!(jstb64.value(), bits);
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_tag_setter() {
+fn wasm_tag_accessor() {
+    tag_accessor();
+}
+
+#[test]
+fn test_tag_accessor() {
+    tag_accessor();
+}
+
+fn tag_setter() {
     let tag = "Godzilla";
     let bits = b"forest";
     let mut tb64 = TaggedBase64::new("Bambi", bits).unwrap();
@@ -199,8 +290,39 @@ fn test_tag_setter() {
     assert_eq!(tb64.value(), bits);
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
-fn test_empty_value() {
+fn wasm_tag_setter() {
+    tag_setter();
+}
+
+#[test]
+fn test_tag_setter() {
+    tag_setter();
+}
+
+fn value_setter() {
+    let tag = "Godzilla";
+    let bits = b"forest";
+    let new_bits = b"trees";
+    let mut tb64 = TaggedBase64::new(tag, bits).unwrap();
+    tb64.set_value(new_bits);
+    assert_eq!(tb64.tag(), tag);
+    assert_eq!(tb64.value(), new_bits);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+fn wasm_value_setter() {
+    value_setter();
+}
+
+#[test]
+fn test_value_setter() {
+    value_setter();
+}
+
+fn empty_value() {
     let t = TaggedBase64::new("TAG", b"").unwrap();
     assert_eq!(t.tag(), "TAG");
     assert_eq!(t.value(), b"");
@@ -209,4 +331,24 @@ fn test_empty_value() {
         TaggedBase64::parse("A~wA").unwrap(),
         TaggedBase64::new("A", b"").unwrap()
     );
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+fn wasm_empty_value() {
+    empty_value();
+}
+
+#[test]
+fn test_empty_value() {
+    empty_value();
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+fn test_js_new_error() {
+    match JsTaggedBase64::new("~", b"oops!") {
+        Err(e) => assert_eq!(e, to_jsvalue("An invalid character was found in the tag.")),
+        _ => assert!(false),
+    }
 }
