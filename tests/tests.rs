@@ -5,7 +5,7 @@ use std::str;
 use tagged_base64::*;
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen_test::*;
+use {wasm_bindgen::JsValue, wasm_bindgen_test::*};
 
 // Run WASM tests like this
 //    wasm-pack test --headless --firefox --chrome
@@ -351,4 +351,20 @@ fn test_js_new_error() {
         Err(e) => assert_eq!(e, to_jsvalue("An invalid character was found in the tag.")),
         _ => assert!(false),
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+fn wasm_error_to_string() {
+    assert_eq!(
+        JsValue::from(Tb64Error::InvalidByte(66, 42)),
+        to_jsvalue("An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value. The offset and offending byte are provided.")
+    );
+}
+
+#[test]
+fn test_error_fmt() {
+    assert_eq!(
+        format!("{}", Tb64Error::InvalidByte(66, 42)),
+        "An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value. The offset and offending byte are provided.".to_string());
 }

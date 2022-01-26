@@ -40,6 +40,7 @@
 //! allow safe transit to- and from JavaScript, including in URLs, as
 //! well as display and input in a user interface.
 
+#![allow(clippy::unused_unit)]
 use core::fmt;
 use core::fmt::Display;
 use crc_any::CRC;
