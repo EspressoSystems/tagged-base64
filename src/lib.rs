@@ -326,6 +326,7 @@ impl From<Tb64Error> for JsValue {
 #[allow(clippy::unused_unit)]
 #[wasm_bindgen]
 impl JsTaggedBase64 {
+    #[allow(clippy::unused_unit)]
     #[wasm_bindgen(constructor)]
     pub fn new(tag: &str, value: &[u8]) -> Result<JsTaggedBase64, JsValue> {
         let result = TaggedBase64::new(tag, value);
