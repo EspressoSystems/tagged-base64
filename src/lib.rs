@@ -117,6 +117,7 @@ impl fmt::Display for Tb64Error {
 }
 
 /// Converts a TaggedBase64 value to a String.
+#[allow(clippy::unused_unit)]
 #[wasm_bindgen]
 pub fn to_string(tb64: &TaggedBase64) -> String {
     let value = &mut tb64.value.clone();
@@ -322,6 +323,7 @@ impl From<Tb64Error> for JsValue {
     }
 }
 
+#[allow(clippy::unused_unit)]
 #[wasm_bindgen]
 impl JsTaggedBase64 {
     #[wasm_bindgen(constructor)]
