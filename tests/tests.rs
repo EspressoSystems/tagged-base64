@@ -374,28 +374,27 @@ fn test_error_fmt() {
 #[test]
 fn basic_errors() {
     let e = TaggedBase64::new("A/A",&[0]).unwrap_err();
-    println!("{}", e);
+    println!("{:?}: {}", e, e);
     assert!(matches!(e,Tb64Error::InvalidTag));
 
     let e = TaggedBase64::parse("AA").unwrap_err();
-    println!("{}", e);
+    println!("{:?}: {}", e, e);
     assert!(matches!(e,Tb64Error::MissingDelimiter));
 
-
     let e = TaggedBase64::parse("AAA~AAA").unwrap_err();
-    println!("{}", e);
+    println!("{:?}: {}", e, e);
     assert!(matches!(e,Tb64Error::InvalidChecksum));
 
     let e = TaggedBase64::parse("AAA~").unwrap_err();
-    println!("{}", e);
+    println!("{:?}: {}", e, e);
     assert!(matches!(e,Tb64Error::MissingChecksum));
 
     let e = TaggedBase64::parse("AAA~AAAAA").unwrap_err();
-    println!("{}", e);
+    println!("{:?}: {}", e, e);
     assert!(matches!(e,Tb64Error::InvalidLength));
 
     let e = TaggedBase64::parse("AAA~AAF").unwrap_err();
-    println!("{}", e);
+    println!("{:?}: {}", e, e);
     assert!(matches!(e,Tb64Error::InvalidLastSymbol(_,_)));
 }
 
