@@ -45,6 +45,8 @@ web-sys = { version = "0.3.49", features = ["console", "Headers", "RequestInit",
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3.28" }
+quickcheck = "1.0"
+quickcheck_macros = "1.0"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
