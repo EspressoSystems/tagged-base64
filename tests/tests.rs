@@ -383,7 +383,7 @@ fn basic_errors() {
 
     let e = TaggedBase64::parse("AAA~A/A").unwrap_err();
     println!("{:?}: {}", e, e);
-    assert!(matches!(e,Tb64Error::InvalidByte(_,_)));
+    assert!(matches!(e, Tb64Error::InvalidByte(_, _)));
 
     let e = TaggedBase64::parse("AAA~AAA").unwrap_err();
     println!("{:?}: {}", e, e);
