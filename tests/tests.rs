@@ -1,5 +1,7 @@
 // Copyright © 2022 Translucence Research, Inc. All rights reserved.
 
+use quickcheck_macros::quickcheck;
+
 use base64::{decode_config, encode_config};
 use std::str;
 use tagged_base64::*;
@@ -367,4 +369,57 @@ fn test_error_fmt() {
     assert_eq!(
         format!("{}", Tb64Error::InvalidByte(66, 42)),
         "An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value. The offset and offending byte are provided.".to_string());
+}
+
+#[test]
+fn basic_errors() {
+    let e = TaggedBase64::new("A/A", &[0]).unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::InvalidTag));
+
+    let e = TaggedBase64::parse("AA").unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::MissingDelimiter));
+
+    let e = TaggedBase64::parse("AAA~A/A").unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::InvalidByte(_, _)));
+
+    let e = TaggedBase64::parse("AAA~AAA").unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::InvalidChecksum));
+
+    let e = TaggedBase64::parse("AAA~").unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::MissingChecksum));
+
+    let e = TaggedBase64::parse("AAA~AAAAA").unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::InvalidLength));
+
+    let e = TaggedBase64::parse("AAA~AAF").unwrap_err();
+    println!("{:?}: {}", e, e);
+    assert!(matches!(e, Tb64Error::InvalidLastSymbol(_, _)));
+}
+
+fn one_bit_corruption(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16) {
+    let encoded_tag = TaggedBase64::encode_raw(&tag.to_le_bytes());
+    assert_eq!(encoded_tag.len(), 3);
+
+    let (mut data, last_data) = data;
+    data.push(last_data);
+
+    let encoded = TaggedBase64::new(&encoded_tag, &data).unwrap();
+    let mut encoded_bytes = to_string(&encoded).into_bytes();
+    let (ix, shift) = ((bit_to_flip >> 3) as usize, bit_to_flip & ((1 << 3) - 1));
+    let ix = ix % encoded_bytes.len();
+    encoded_bytes[ix] ^= 1 << shift;
+    if let Ok(corrupted) = str::from_utf8(&encoded_bytes) {
+        println!("{}", TaggedBase64::parse(corrupted).unwrap_err());
+    }
+}
+
+#[quickcheck]
+fn one_bit_corruption_quickcheck(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16) {
+    one_bit_corruption(tag, data, bit_to_flip);
 }
