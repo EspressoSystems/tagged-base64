@@ -243,7 +243,7 @@ impl TaggedBase64 {
         let mut crc8 = CRC::crc8();
         crc8.digest(&tag);
         crc8.digest(&value);
-        crc8.get_crc() as u8
+        (crc8.get_crc() as u8) ^ (value.len() as u8)
     }
 
     /// Returns true for characters permitted in URL-safe base64 encoding,

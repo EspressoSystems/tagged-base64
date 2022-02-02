@@ -44,9 +44,10 @@ base64 = "0.13.0"
 web-sys = { version = "0.3.49", features = ["console", "Headers", "RequestInit", "RequestMode", "Request", "Response", "Window"] }
 
 [dev-dependencies]
-wasm-bindgen-test = { version = "0.3.28" }
+getrandom = { version = "0.2", features = ["js"] }
 quickcheck = "1.0"
 quickcheck_macros = "1.0"
+wasm-bindgen-test = { version = "0.3.28" }
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
