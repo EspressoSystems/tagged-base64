@@ -365,4 +365,13 @@ impl JsTaggedBase64 {
     pub fn set_value(&mut self, value: &[u8]) {
         self.tb64.set_value(value);
     }
+
+    /// Formats the JsTaggedBase64 instance as a URL-safe string.
+    //
+    // Note: this method is included for WASM bindings, since the trait methods from Display don't
+    // get compiled to WASM.
+    #[allow(clippy::inherent_to_string_shadow_display)]
+    pub fn to_string(&self) -> String {
+        self.tb64.to_string()
+    }
 }
