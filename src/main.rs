@@ -43,7 +43,7 @@ fn main() {
         let s: String = MainOpt::from_args().tb64_str.unwrap();
         match TaggedBase64::parse(&s) {
             Ok(v) => {
-                io::stdout().write(&v.value()).unwrap();
+                io::stdout().write_all(&v.value()).unwrap();
                 exit(0);
             }
             Err(e) => {
