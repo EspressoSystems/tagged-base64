@@ -56,9 +56,7 @@ fn main() {
         io::stdin().read_to_end(&mut v).unwrap();
         println!(
             "{}",
-            TaggedBase64::new(&MainOpt::from_args().tag.unwrap(), &v)
-                .unwrap()
-                .to_string()
+            TaggedBase64::new(&MainOpt::from_args().tag.unwrap(), &v).unwrap()
         );
         exit(0);
     }
