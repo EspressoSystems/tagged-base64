@@ -17,13 +17,17 @@ transaction ID or a ledger address, etc.
 
 For example,
 
-    TX~Zm9vYmFy
-    LA~MzE0MTU
+    TX~QmVhdXRpZnVsEA
+    LA~SG9tZbo
 
 Like the base64 value, the tag is also restricted to the URL-safe
 base64 character set.
 
 **Note:** The tag may be omitted, but the base64 value cannot because it contains the checksum.
+
+# Standalone Executable
+
+The crate includes a standalone executable for converting to and from Tagged Base64. See `tagged_base64 --help` for usage.
 
 ## Rationale
 
