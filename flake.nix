@@ -14,7 +14,7 @@
     in {
       devShell = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
-          (rust-bin.stable.latest.rust.override {
+          (rust-bin.stable.latest.default.override {
             targets = [ "wasm32-unknown-unknown" ];
           })
           wasm-pack

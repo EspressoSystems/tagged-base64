@@ -1,0 +1,51 @@
+<html>
+
+<head>
+    <script type="module">
+        import init, { JsTaggedBase64 } from "./tagged-base64/tagged-base64.js";
+        var base64 = null;
+        console.log("foo");
+
+        function update() {
+            const input_elem = document.getElementById("b64_input");
+            const output_elem = document.getElementById("b64_output");
+
+            output_elem.innerText =
+                        (new
+                        JsTaggedBase64("TAG",input_elem.value)).to_string()
+        }
+
+        window.update = update;
+
+        base64 = await init();
+        console.log("baz");
+        //async function setup() {
+        //}
+        //setup();
+
+        //WebAssembly.instantiateStreaming(fetch('/tagged-base64.wasm'),
+        //            importObject)
+        //    .then(results => {
+        //                base64 = results;
+        //            });
+    </script>
+
+    <script>
+        console.log("bar");
+    </script>
+</head>
+
+<body>
+    <input id="b64_input">
+    <table>
+        <tr>
+            <td>
+                <div id="b64_output"></div>
+            </td>
+        </tr>
+    </table>
+    <button onclick="update()" >B64 encode</button>
+</body>
+
+</html>
+

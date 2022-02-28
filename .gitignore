@@ -26,3 +26,5 @@ integration-tests/__pycache__
 pkg
 www/dist
 www/node_modules
+
+js-test/tagged-base64
