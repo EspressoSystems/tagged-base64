@@ -8,11 +8,40 @@
 
         function update() {
             const input_elem = document.getElementById("b64_input");
-            const output_elem = document.getElementById("b64_output");
+            const output_elem_encode = document.getElementById("b64_encode");
+            const output_elem_decode = document.getElementById("b64_decode");
+            const output_elem_roundtrip = document.getElementById("b64_roundtrip");
 
-            output_elem.innerText =
-                        (new
-                        JsTaggedBase64("TAG",input_elem.value)).to_string()
+            console.log(input_elem.value);
+
+            let raw = new TextEncoder().encode(input_elem.value);
+
+            let encoded = (new
+                        JsTaggedBase64("TAG",raw))
+
+            output_elem_encode.innerText =
+                        encoded.to_string();
+            try {
+                let parsed =
+                    JsTaggedBase64.parse(encoded.to_string());
+                console.log(parsed);
+                parsed = new
+                TextDecoder("utf-8").decode(parsed.value());
+                output_elem_roundtrip.innerText = parsed;
+            } catch(e) {
+                output_elem_roundtrip.innerText = "Error: " + e;
+            }
+
+            try {
+                let parsed =
+                    JsTaggedBase64.parse(input_elem.value);
+                console.log(parsed);
+                parsed = new
+                TextDecoder("utf-8").decode(parsed.value());
+                output_elem_decode.innerText = parsed;
+            } catch(e) {
+                output_elem_decode.innerText = "Error: " + e;
+            }
         }
 
         window.update = update;
@@ -33,18 +62,37 @@
     <script>
         console.log("bar");
     </script>
+
+    <style>
+        table, tr, td {
+            border: 1px solid black
+        }
+    </style>
 </head>
 
 <body>
     <input id="b64_input">
     <table>
         <tr>
+            <td>Encoded</td>
             <td>
-                <div id="b64_output"></div>
+                <div id="b64_encode"></div>
+            </td>
+        </tr>
+        <tr>
+            <td>Round trip</td>
+            <td>
+                <div id="b64_roundtrip"></div>
+            </td>
+        </tr>
+        <tr>
+            <td>Decoded</td>
+            <td>
+                <div id="b64_decode"></div>
             </td>
         </tr>
     </table>
-    <button onclick="update()" >B64 encode</button>
+    <button onclick="update()" >B64 process</button>
 </body>
 
 </html>

@@ -341,9 +341,9 @@ impl JsTaggedBase64 {
     ///
     /// The value is a base64-encoded string, using the URL-safe character
     /// set, and no padding is used.
-    pub fn parse(tb64: &str) -> Result<TaggedBase64, JsValue> {
+    pub fn parse(tb64: &str) -> Result<JsTaggedBase64, JsValue> {
         let result = TaggedBase64::parse(tb64)?;
-        Ok(result)
+        Ok(Self { tb64: result })
     }
 
     /// Gets the tag of a TaggedBase64 instance.
