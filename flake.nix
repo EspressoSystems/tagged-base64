@@ -5,7 +5,10 @@
     rust-overlay.url = github:oxalica/rust-overlay;
   };
 
-  outputs = { nixpkgs, flake-utils, rust-overlay, ... }:
+  inputs.flake-compat.url = "github:edolstra/flake-compat";
+  inputs.flake-compat.flake = false;
+
+  outputs = { nixpkgs, flake-utils, flake-compat, rust-overlay, ... }:
     flake-utils.lib.eachSystem ["x86_64-linux"] (system: let
       pkgs = import nixpkgs {
         inherit system;
