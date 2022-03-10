@@ -1,0 +1,14 @@
+{
+  "name": "tagged-base64",
+  "version": "1.0.0",
+  "description": "JavaScript implementation of TaggedBase64, an encoding for binary data for use in URLs, GUIs, emails, text messages, etc.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "John D. Corbett",
+  "license": "MIT",
+  "dependencies": {
+    "easy-crc": "^1.0.0"
+  }
+}
