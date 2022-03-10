@@ -32,15 +32,15 @@ function toTaggedBase64(tag, data) {
         .replace(/\//g, "_");
 }
 
-if (toTaggedBase64("TX", "") != "TX~1w") {
+if (toTaggedBase64("TX", "") !== "TX~1w") {
     console.log('toTaggedBase64("TX", "") is wrong. Should return "TX~1w".');
 }
 
-if (toTaggedBase64("TR", "hi") != "TR~aGkR") {
+if (toTaggedBase64("TR", "hi") !== "TR~aGkR") {
     console.log('toTaggedBase64("TX", "hi") is wrong. Should return "TR~aGkR".');
 }
 
-if (toTaggedBase64("TR", toBytes("hi")) != "TR~aGkR") {
+if (toTaggedBase64("TR", toBytes("hi")) !== "TR~aGkR") {
     console.log('toTaggedBase64("TX", toBytes("hi")) is wrong. Should return "TR~aGkR".');
 }
 
