@@ -1,6 +1,13 @@
 // Copyright (c) 2022 Espresso Systems (espressosys.com)
 
 // Node.js Javascript for constructing and parsing Tagged Base64
+//
+// To run this, first
+//    npm install easy-crc
+// Then
+//    node app.js
+//
+
 
 const { crc8 } = require('easy-crc');
 
@@ -39,7 +46,7 @@ function toTaggedBase64(tag, data) {
 function fromTaggedBase64(tb64) {
     const [tag, dataCs] = tb64.split("~");
     if (typeof dataCs == 'undefined') {
-        return [];
+        return undefined;
     }
     const bytes = toBytes(Buffer.from(dataCs, 'base64').toString('ascii'));
     const n = bytes.length;
@@ -49,7 +56,7 @@ function fromTaggedBase64(tb64) {
     if (cs == cs2) {
         return [tag, stringFromBytes(data)];
     } else {
-        return [];
+        return undefined;
     }
 }
 
