@@ -43,6 +43,7 @@
 #![allow(clippy::unused_unit)]
 use core::fmt;
 use core::fmt::Display;
+use core::str::FromStr;
 use crc_any::CRC;
 use wasm_bindgen::prelude::*;
 
@@ -157,6 +158,14 @@ impl fmt::Display for TaggedBase64 {
             TB64_DELIM,
             TaggedBase64::encode_raw(value)
         )
+    }
+}
+
+impl FromStr for TaggedBase64 {
+    type Err = Tb64Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
     }
 }
 
