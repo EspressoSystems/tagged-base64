@@ -1,10 +1,15 @@
+[workspace]
+members = [
+    "espresso-systems-constants"
+]
+
 [package]
 name = "tagged-base64"
 version = "0.2.0"
 authors = ["John D. Corbett <corbett@pictographer.com>"]
 edition = "2018"
 description = "User-oriented format for binary data. Tagged Base64 is intended to be used in user interfaces including URLs and text to be copied and pasted without the need for additional encoding, such as quoting or escape sequences."
-repository = "https://gitlab.com/translucence/common/tagged-base64"
+repository = "https://github.com/espressosystems/tagged-base64"
 license-file = "LICENSE"
 
 [lib]

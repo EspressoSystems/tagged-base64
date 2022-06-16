@@ -1,0 +1,8 @@
+[package]
+name = "tagged-base64-espresso-systems-constants"
+version = "0.1.0"
+authors = ["Victor Koenders <git@trangar.com>"]
+edition = "2021"
+description = "tagged-base62 tags used by the Espresso Systems company"
+repository = "https://github.com/espressosystems/tagged-base64"
+license-file = "../LICENSE"
