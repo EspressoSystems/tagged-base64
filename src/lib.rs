@@ -122,7 +122,7 @@ impl fmt::Display for Tb64Error {
 #[wasm_bindgen]
 pub fn to_string(tb64: &TaggedBase64) -> String {
     let value = &mut tb64.value.clone();
-    value.push(TaggedBase64::calc_checksum(&tb64.tag, &tb64.value));
+    value.push(tb64.checksum);
     format!(
         "{}{}{}",
         tb64.tag,
@@ -133,14 +133,7 @@ pub fn to_string(tb64: &TaggedBase64) -> String {
 
 impl From<&TaggedBase64> for String {
     fn from(tb64: &TaggedBase64) -> Self {
-        let value = &mut tb64.value.clone();
-        value.push(TaggedBase64::calc_checksum(&tb64.tag, &tb64.value));
-        format!(
-            "{}{}{}",
-            tb64.tag,
-            TB64_DELIM,
-            TaggedBase64::encode_raw(value)
-        )
+        to_string(tb64)
     }
 }
 
@@ -149,15 +142,7 @@ impl From<&TaggedBase64> for String {
 /// checksum.
 impl fmt::Display for TaggedBase64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let value = &mut self.value.clone();
-        value.push(TaggedBase64::calc_checksum(&self.tag, &self.value));
-        write!(
-            f,
-            "{}{}{}",
-            self.tag,
-            TB64_DELIM,
-            TaggedBase64::encode_raw(value)
-        )
+        write!(f, "{}", to_string(self))
     }
 }
 
