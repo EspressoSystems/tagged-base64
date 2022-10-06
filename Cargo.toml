@@ -44,7 +44,7 @@ base64 = "0.13.0"
 web-sys = { version = "0.3.49", features = ["console", "Headers", "RequestInit", "RequestMode", "Request", "Response", "Window"] }
 
 # Command line argument processing
-structopt = { version = "0.3", features = ["paw"] }
+clap = { version = "4.0", features = ["derive"] }
 
 [dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }
