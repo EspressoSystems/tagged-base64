@@ -141,13 +141,13 @@ fn test_display() {
 /// - Generated string can be parsed
 /// - Accessors and parsed string match the supplied values
 fn check_tb64(tag: &str, value: &[u8]) {
-    let mut tb64 = JsTaggedBase64::new(tag, &value).unwrap();
+    let mut tb64 = TaggedBase64::new(tag, &value).unwrap();
     let str = format!("{}", &tb64);
 
     // use web_sys;
     // web_sys::console::log_1(&format!("{}", &tb64).into());
 
-    let parsed = JsTaggedBase64::parse(&str).unwrap();
+    let parsed = TaggedBase64::parse(&str).unwrap();
 
     assert_eq!(&tb64, &parsed);
 
@@ -266,16 +266,20 @@ fn tag_accessor() {
     let tb64 = TaggedBase64::new(&tag, bits).unwrap();
     assert_eq!(tb64.tag(), tag);
     assert_eq!(tb64.value(), bits);
-
-    let jstb64 = JsTaggedBase64::new(&tag, bits).unwrap();
-    assert_eq!(jstb64.tag(), tag);
-    assert_eq!(jstb64.value(), bits);
 }
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen_test]
 fn wasm_tag_accessor() {
-    tag_accessor();
+    let tag = "Tag47";
+    let bits = b"Just some bits";
+    let tb64 = TaggedBase64::new(&tag, bits).unwrap();
+    assert_eq!(tb64.tag(), tag);
+    assert_eq!(tb64.value(), bits);
+
+    let jstb64 = JsTaggedBase64::new(&tag, bits).unwrap();
+    assert_eq!(jstb64.tag(), tag);
+    assert_eq!(jstb64.value(), bits);
 }
 
 #[test]
