@@ -42,9 +42,12 @@
 
 #![allow(clippy::unused_unit)]
 use core::fmt;
+#[cfg(target_arch = "wasm32")]
 use core::fmt::Display;
 use core::str::FromStr;
 use crc_any::CRC;
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
 /// Separator that does not appear in URL-safe base64 encoding and can
@@ -56,7 +59,7 @@ pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 
 /// A structure holding a string tag, vector of bytes, and a checksum
 /// covering the tag and the bytes.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TaggedBase64 {
     tag: String,
@@ -68,7 +71,7 @@ pub struct TaggedBase64 {
 ///
 /// The primary difference is that JsTaggedBase64 returns errors
 /// of type JsValue.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JsTaggedBase64 {
     tb64: TaggedBase64,
@@ -119,7 +122,7 @@ impl fmt::Display for Tb64Error {
 }
 
 /// Converts a TaggedBase64 value to a String.
-#[wasm_bindgen]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn to_string(tb64: &TaggedBase64) -> String {
     let value = &mut tb64.value.clone();
     value.push(tb64.checksum);
@@ -307,16 +310,19 @@ impl TaggedBase64 {
 ///
 /// Note: Type parameters aren't supported by `wasm-pack` yet so this
 /// can't be included in the TaggedBase64 type implementation.
+#[cfg(target_arch = "wasm32")]
 pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
     JsValue::from_str(&format!("{}", d))
 }
 
+#[cfg(target_arch = "wasm32")]
 impl From<Tb64Error> for JsValue {
     fn from(error: Tb64Error) -> JsValue {
         to_jsvalue(format!("{}", error))
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl JsTaggedBase64 {
     #[wasm_bindgen(constructor)]
