@@ -41,14 +41,22 @@
 //! well as display and input in a user interface.
 
 #![allow(clippy::unused_unit)]
+use ark_serialize::*;
 use core::fmt;
 #[cfg(target_arch = "wasm32")]
 use core::fmt::Display;
 use core::str::FromStr;
 use crc_any::CRC;
+use serde::{
+    de::{Deserialize, Deserializer, Error as DeError},
+    ser::{Error as SerError, Serialize, Serializer},
+};
+use snafu::Snafu;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
+
+pub use tagged_base64_macros::tagged;
 
 /// Separator that does not appear in URL-safe base64 encoding and can
 /// appear in URLs without percent-encoding.
@@ -60,11 +68,47 @@ pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 /// A structure holding a string tag, vector of bytes, and a checksum
 /// covering the tag and the bytes.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct TaggedBase64 {
     tag: String,
     value: Vec<u8>,
     checksum: u8,
+}
+
+impl Serialize for TaggedBase64 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            // If we are serializing to a human-readable format, be nice and just display the
+            // tagged base 64 as a string.
+            Serialize::serialize(&self.to_string(), serializer)
+        } else {
+            // For binary formats, convert to bytes (using CanonicalSerialize) and write the bytes.
+            let mut bytes = vec![];
+            CanonicalSerialize::serialize(self, &mut bytes).map_err(S::Error::custom)?;
+            Serialize::serialize(&bytes, serializer)
+        }
+    }
+}
+
+impl<'a> Deserialize<'a> for TaggedBase64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'a>,
+    {
+        if deserializer.is_human_readable() {
+            // If we are deserializing a human-readable format, the serializer would have written
+            // the tagged base 64 as a string, so deserialize a string and then parse it.
+            Self::from_str(Deserialize::deserialize(deserializer)?).map_err(D::Error::custom)
+        } else {
+            // Otherwise, this is a binary format; deserialize bytes and then convert the bytes to
+            // TaggedBase64 using CanonicalDeserialize.
+            let bytes = <Vec<u8> as Deserialize>::deserialize(deserializer)?;
+            CanonicalDeserialize::deserialize(bytes.as_slice()).map_err(D::Error::custom)
+        }
+    }
 }
 
 /// JavaScript-compatible wrapper for TaggedBase64
@@ -77,7 +121,7 @@ pub struct JsTaggedBase64 {
     tb64: TaggedBase64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Snafu)]
 pub enum Tb64Error {
     /// An invalid character was found in the tag.
     InvalidTag,
@@ -87,38 +131,25 @@ pub enum Tb64Error {
     MissingChecksum,
     /// An invalid byte was found while decoding the base64-encoded value.
     /// The offset and offending byte are provided.
-    InvalidByte(usize, u8),
+    #[snafu(display(
+        "An invalid byte ({:#x}) was found at offset {} while decoding the base64-encoded value.",
+        byte,
+        offset
+    ))]
+    InvalidByte { offset: usize, byte: u8 },
     /// The last non-padding input symbol's encoded 6 bits have
     /// nonzero bits that will be discarded. This is indicative of
     /// corrupted or truncated Base64. Unlike InvalidByte, which
     /// reports symbols that aren't in the alphabet, this error is for
     /// symbols that are in the alphabet but represent nonsensical
     /// encodings.
-    InvalidLastSymbol(usize, u8),
+    InvalidLastSymbol { offset: usize, byte: u8 },
     /// The length of the base64-encoded value is invalid.
     InvalidLength,
     /// The checksum was truncated or did not match.
     InvalidChecksum,
-}
-
-impl fmt::Display for Tb64Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Tb64Error::InvalidTag =>
-                write!(f, "An invalid character was found in the tag."),
-            Tb64Error::MissingDelimiter =>
-                write!(f, "Missing delimiter ({}).", TB64_DELIM),
-            Tb64Error::MissingChecksum =>
-                write!(f, "Missing checksum in value."),
-            Tb64Error::InvalidByte(offset, byte) =>
-                write!(f, "An invalid byte ({:#0x}) was found at offset {} while decoding the base64-encoded value. The offset and offending byte are provided.", byte, offset),
-            Tb64Error::InvalidLastSymbol(offset, byte) => write!(f, "The last non-padding input symbol's encoded 6 bits have nonzero bits that will be discarded. This is indicative of corrupted or truncated Base64. Unlike InvalidByte, which reports symbols that aren't in the alphabet, this error is for symbols that are in the alphabet but represent nonsensical encodings. Invalid byte ({:#0x}) at offset {}.", byte, offset),
-            Tb64Error::InvalidLength =>
-                write!(f, "The length of the base64-encoded value is invalid."),
-            Tb64Error::InvalidChecksum =>
-                write!(f, "The checksum was truncated or did not match."),
-        }
-    }
+    /// The data did not encode the expected type.
+    InvalidData,
 }
 
 /// Converts a TaggedBase64 value to a String.
@@ -296,12 +327,20 @@ impl TaggedBase64 {
     /// Wraps the underlying base64 decoder.
     pub fn decode_raw(value: &str) -> Result<Vec<u8>, Tb64Error> {
         base64::decode_config(value, TB64_CONFIG).map_err(|err| match err {
-            base64::DecodeError::InvalidByte(offset, byte) => Tb64Error::InvalidByte(offset, byte),
+            base64::DecodeError::InvalidByte(offset, byte) => {
+                Tb64Error::InvalidByte { offset, byte }
+            }
             base64::DecodeError::InvalidLength => Tb64Error::InvalidLength,
             base64::DecodeError::InvalidLastSymbol(offset, byte) => {
-                Tb64Error::InvalidLastSymbol(offset, byte)
+                Tb64Error::InvalidLastSymbol { offset, byte }
             }
         })
+    }
+}
+
+impl AsRef<[u8]> for TaggedBase64 {
+    fn as_ref(&self) -> &[u8] {
+        &self.value
     }
 }
 
@@ -374,4 +413,16 @@ impl JsTaggedBase64 {
     pub fn to_string(&self) -> String {
         self.tb64.to_string()
     }
+}
+
+/// Trait for types whose serialization is not human-readable.
+///
+/// Such types have a human-readable tag which is used to identify tagged base
+/// 64 blobs representing a serialization of that type.
+///
+/// Rather than implement this trait manually, it is recommended to use the
+/// [macro@tagged] macro to specify a tag for your type. That macro also
+/// derives appropriate serde implementations for serializing as an opaque blob.
+pub trait Tagged {
+    fn tag() -> String;
 }

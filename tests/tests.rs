@@ -1,8 +1,10 @@
 // Copyright © 2022 Translucence Research, Inc. All rights reserved.
 
+use ark_serialize::*;
 use quickcheck_macros::quickcheck;
 
 use base64::{decode_config, encode_config};
+use std::convert::TryInto;
 use std::str;
 use tagged_base64::*;
 
@@ -363,16 +365,24 @@ fn test_js_new_error() {
 #[wasm_bindgen_test]
 fn wasm_error_to_string() {
     assert_eq!(
-        JsValue::from(Tb64Error::InvalidByte(66, 42)),
-        to_jsvalue("An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value. The offset and offending byte are provided.")
+        JsValue::from(Tb64Error::InvalidByte { offset: 66, byte: 42 }),
+        to_jsvalue("An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value.")
     );
 }
 
 #[test]
 fn test_error_fmt() {
     assert_eq!(
-        format!("{}", Tb64Error::InvalidByte(66, 42)),
-        "An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value. The offset and offending byte are provided.".to_string());
+        format!(
+            "{}",
+            Tb64Error::InvalidByte {
+                offset: 66,
+                byte: 42
+            }
+        ),
+        "An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value."
+            .to_string()
+    );
 }
 
 #[test]
@@ -387,7 +397,7 @@ fn basic_errors() {
 
     let e = TaggedBase64::parse("AAA~A/A").unwrap_err();
     println!("{:?}: {}", e, e);
-    assert!(matches!(e, Tb64Error::InvalidByte(_, _)));
+    assert!(matches!(e, Tb64Error::InvalidByte { .. }));
 
     let e = TaggedBase64::parse("AAA~AAA").unwrap_err();
     println!("{:?}: {}", e, e);
@@ -403,7 +413,7 @@ fn basic_errors() {
 
     let e = TaggedBase64::parse("AAA~AAF").unwrap_err();
     println!("{:?}: {}", e, e);
-    assert!(matches!(e, Tb64Error::InvalidLastSymbol(_, _)));
+    assert!(matches!(e, Tb64Error::InvalidLastSymbol { .. }));
 }
 
 fn one_bit_corruption(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16) {
@@ -426,4 +436,36 @@ fn one_bit_corruption(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16) {
 #[quickcheck]
 fn one_bit_corruption_quickcheck(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16) {
     one_bit_corruption(tag, data, bit_to_flip);
+}
+
+#[tagged("BLOB")]
+#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+struct Blob(Vec<u8>);
+
+#[test]
+fn test_tagged() {
+    let bytes = (0..100).into_iter().collect();
+    let b = Blob(bytes);
+    let t = TaggedBase64::from(&b);
+    assert!(t.to_string().starts_with("BLOB~"));
+    assert_eq!(b, t.try_into().unwrap());
+}
+
+#[test]
+fn test_serde_json() {
+    let bytes = (0..100).into_iter().collect::<Vec<_>>();
+    let t = TaggedBase64::new("TAG", &bytes).unwrap();
+    let s = serde_json::to_string(&t).unwrap();
+    assert!(s.starts_with("\"TAG~"));
+    assert_eq!(t, serde_json::from_str(&s).unwrap());
+}
+
+#[test]
+fn test_serde_bincode() {
+    let bytes = (0..100).into_iter().collect::<Vec<_>>();
+    let t = TaggedBase64::new("TAG", &bytes).unwrap();
+    assert_eq!(
+        t,
+        bincode::deserialize(&bincode::serialize(&t).unwrap()).unwrap()
+    );
 }
