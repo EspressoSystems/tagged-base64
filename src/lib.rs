@@ -41,12 +41,14 @@
 //! well as display and input in a user interface.
 
 #![allow(clippy::unused_unit)]
+#[cfg(feature = "ark-serialize")]
 use ark_serialize::*;
 use core::fmt;
 #[cfg(target_arch = "wasm32")]
 use core::fmt::Display;
 use core::str::FromStr;
 use crc_any::CRC;
+#[cfg(feature = "serde")]
 use serde::{
     de::{Deserialize, Deserializer, Error as DeError},
     ser::{Error as SerError, Serialize, Serializer},
@@ -68,13 +70,18 @@ pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 /// A structure holding a string tag, vector of bytes, and a checksum
 /// covering the tag and the bytes.
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-#[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(
+    feature = "ark-serialize",
+    derive(CanonicalSerialize, CanonicalDeserialize)
+)]
 pub struct TaggedBase64 {
     tag: String,
     value: Vec<u8>,
     checksum: u8,
 }
 
+#[cfg(feature = "serde")]
 impl Serialize for TaggedBase64 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -93,6 +100,7 @@ impl Serialize for TaggedBase64 {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'a> Deserialize<'a> for TaggedBase64 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

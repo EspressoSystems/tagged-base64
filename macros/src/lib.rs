@@ -87,13 +87,21 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
             x
         ),
     };
-    let output = quote! {
+
+    #[cfg(feature = "serde")]
+    let struct_def = quote! {
         #[derive(serde::Serialize, serde::Deserialize)]
         #[serde(try_from = "tagged_base64::TaggedBase64", into = "tagged_base64::TaggedBase64")]
         // Override the inferred bound for Serialize/Deserialize impls. If we're converting to and
         // from CanonicalBytes as an intermediate, the impls should work for any generic parameters.
         #[serde(bound = "")]
         #input
+    };
+    #[cfg(not(feature = "serde"))]
+    let struct_def = &input;
+
+    let output = quote! {
+        #struct_def
 
         impl #impl_generics tagged_base64::Tagged for #name #ty_generics #where_clause {
             fn tag() -> ark_std::string::String {
