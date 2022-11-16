@@ -115,7 +115,17 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             type Error = tagged_base64::Tb64Error;
             fn try_from(t: tagged_base64::TaggedBase64) -> Result<Self, Self::Error> {
-                if t.tag() == <#name #ty_generics>::tag() {
+                (&t).try_into()
+            }
+        }
+
+        impl #impl_generics core::convert::TryFrom<&tagged_base64::TaggedBase64>
+            for #name #ty_generics
+        #where_clause
+        {
+            type Error = tagged_base64::Tb64Error;
+            fn try_from(t: &tagged_base64::TaggedBase64) -> Result<Self, Self::Error> {
+                if t.tag() == <#name #ty_generics as tagged_base64::Tagged>::tag() {
                     <Self as CanonicalDeserialize>::deserialize(t.as_ref())
                         .map_err(|_| tagged_base64::Tb64Error::InvalidData)
                 } else {
@@ -137,8 +147,8 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             fn from(x: &#name #ty_generics) -> Self {
                 let mut bytes = ark_std::vec![];
-                x.serialize(&mut bytes).unwrap();
-                Self::new(&<#name #ty_generics>::tag(), &bytes).unwrap()
+                CanonicalSerialize::serialize(x, &mut bytes).unwrap();
+                Self::new(&<#name #ty_generics as tagged_base64::Tagged>::tag(), &bytes).unwrap()
             }
         }
 
