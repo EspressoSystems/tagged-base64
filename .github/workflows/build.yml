@@ -48,7 +48,7 @@ jobs:
         with:
           token: ${{ github.token }}
 
-       name: Clippy without default features
+      - name: Clippy without default features
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ github.token }}
