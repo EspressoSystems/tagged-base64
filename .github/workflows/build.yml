@@ -48,6 +48,12 @@ jobs:
         with:
           token: ${{ github.token }}
 
+      - name: Clippy without default features
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ github.token }}
+          args: --no-default-features
+
       - name: Audit
         uses: actions-rs/audit-check@v1
         with:
