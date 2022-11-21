@@ -115,6 +115,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             type Error = tagged_base64::Tb64Error;
             fn try_from(t: tagged_base64::TaggedBase64) -> Result<Self, Self::Error> {
+                use core::convert::TryInto;
                 (&t).try_into()
             }
         }
