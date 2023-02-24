@@ -114,7 +114,8 @@ impl<'a> Deserialize<'a> for TaggedBase64 {
             // Otherwise, this is a binary format; deserialize bytes and then convert the bytes to
             // TaggedBase64 using CanonicalDeserialize.
             let bytes = <Vec<u8> as Deserialize>::deserialize(deserializer)?;
-            CanonicalDeserialize::deserialize_uncompressed_unchecked(bytes.as_slice()).map_err(D::Error::custom)
+            CanonicalDeserialize::deserialize_uncompressed_unchecked(bytes.as_slice())
+                .map_err(D::Error::custom)
         }
     }
 }
