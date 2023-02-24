@@ -127,7 +127,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
             type Error = tagged_base64::Tb64Error;
             fn try_from(t: &tagged_base64::TaggedBase64) -> Result<Self, Self::Error> {
                 if t.tag() == <#name #ty_generics as tagged_base64::Tagged>::tag() {
-                    <Self as CanonicalDeserialize>::deserialize(t.as_ref())
+                    <Self as CanonicalDeserialize>::deserialize_uncompressed_unchecked(t.as_ref())
                         .map_err(|_| tagged_base64::Tb64Error::InvalidData)
                 } else {
                     Err(tagged_base64::Tb64Error::InvalidTag)
@@ -148,7 +148,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             fn from(x: &#name #ty_generics) -> Self {
                 let mut bytes = ark_std::vec![];
-                CanonicalSerialize::serialize(x, &mut bytes).unwrap();
+                CanonicalSerialize::serialize_compressed(x, &mut bytes).unwrap();
                 Self::new(&<#name #ty_generics as tagged_base64::Tagged>::tag(), &bytes).unwrap()
             }
         }
