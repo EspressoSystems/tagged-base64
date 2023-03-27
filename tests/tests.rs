@@ -33,7 +33,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 fn base64_sanity() {
     let hello = b"hello rustaceans";
     let encoded = encode_config(hello, TB64_CONFIG);
-    let decoded = decode_config(&encoded, TB64_CONFIG).unwrap();
+    let decoded = decode_config(encoded, TB64_CONFIG).unwrap();
     assert_eq!(&hello.to_vec(), &decoded);
     assert_eq!(
         str::from_utf8(hello).unwrap(),
@@ -143,7 +143,7 @@ fn test_display() {
 /// - Generated string can be parsed
 /// - Accessors and parsed string match the supplied values
 fn check_tb64(tag: &str, value: &[u8]) {
-    let mut tb64 = TaggedBase64::new(tag, &value).unwrap();
+    let mut tb64 = TaggedBase64::new(tag, value).unwrap();
     let str = format!("{}", &tb64);
 
     // use web_sys;
@@ -157,7 +157,7 @@ fn check_tb64(tag: &str, value: &[u8]) {
     assert_eq!(parsed.tag(), tag);
 
     // Do we get back the binary value we supplied?
-    assert!(is_equal(&parsed.value(), &value));
+    assert!(is_equal(&parsed.value(), value));
 
     // If we change the tag, do we get back the new tag?
     tb64.set_tag("foo");
@@ -213,13 +213,13 @@ fn tagged_base64_parse() {
     assert!(TaggedBase64::new("Σ", b"").is_err());
 
     // Note, u128::MAX is 340282366920938463463374607431768211455
-    check_tb64("PK", &u128::MAX.to_string().as_bytes());
+    check_tb64("PK", u128::MAX.to_string().as_bytes());
 
     // Is ten copies of u128::MAX a big enough test?
     let z = u128::MAX;
     check_tb64(
         "many-bits",
-        &format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z).as_bytes(),
+        format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z).as_bytes(),
     );
 
     check_tb64("TX", b"transaction identifier goes here");
@@ -265,7 +265,7 @@ fn test_tagged_base64_new() {
 fn tag_accessor() {
     let tag = "Tag47";
     let bits = b"Just some bits";
-    let tb64 = TaggedBase64::new(&tag, bits).unwrap();
+    let tb64 = TaggedBase64::new(tag, bits).unwrap();
     assert_eq!(tb64.tag(), tag);
     assert_eq!(tb64.value(), bits);
 }
@@ -444,7 +444,7 @@ struct Blob(Vec<u8>);
 
 #[test]
 fn test_tagged() {
-    let bytes = (0..100).into_iter().collect();
+    let bytes = (0..100).collect();
     let b = Blob(bytes);
     let t = TaggedBase64::from(&b);
     assert!(t.to_string().starts_with("BLOB~"));
@@ -453,7 +453,7 @@ fn test_tagged() {
 
 #[test]
 fn test_serde_json() {
-    let bytes = (0..100).into_iter().collect::<Vec<_>>();
+    let bytes = (0..100).collect::<Vec<_>>();
     let t = TaggedBase64::new("TAG", &bytes).unwrap();
     let s = serde_json::to_string(&t).unwrap();
     assert!(s.starts_with("\"TAG~"));
@@ -462,7 +462,7 @@ fn test_serde_json() {
 
 #[test]
 fn test_serde_bincode() {
-    let bytes = (0..100).into_iter().collect::<Vec<_>>();
+    let bytes = (0..100).collect::<Vec<_>>();
     let t = TaggedBase64::new("TAG", &bytes).unwrap();
     assert_eq!(
         t,

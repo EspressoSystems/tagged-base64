@@ -286,11 +286,7 @@ impl TaggedBase64 {
     /// Returns true for characters permitted in URL-safe base64 encoding,
     /// and false otherwise.
     pub fn is_safe_base64_ascii(c: char) -> bool {
-        ('a'..='z').contains(&c)
-            || ('A'..='Z').contains(&c)
-            || ('0'..='9').contains(&c)
-            || (c == '-')
-            || (c == '_')
+        c.is_ascii_alphanumeric() || (c == '-') || (c == '_')
     }
 
     /// Checks that an ASCII byte is safe for use in the tag of a
