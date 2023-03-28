@@ -442,6 +442,18 @@ fn one_bit_corruption_quickcheck(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16
 #[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 struct Blob(Vec<u8>);
 
+#[tagged("BLOB", compressed)]
+#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+struct BlobCompressed(Vec<u8>);
+
+#[tagged("BLOB", checked)]
+#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+struct BlobChecked(Vec<u8>);
+
+#[tagged("BLOB", compressed, checked)]
+#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+struct BlobCompressedChecked(Vec<u8>);
+
 #[test]
 fn test_tagged() {
     let bytes = (0..100).collect();
