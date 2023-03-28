@@ -17,6 +17,13 @@ use syn::{parse_macro_input, AttributeArgs, Item, Meta, NestedMeta};
 /// this macro will serialize the type as bytes for binary encodings and as base 64 for human
 /// readable encodings.
 ///
+/// This macro takes at least one arguments:
+/// * The first argument should be the tag, as a string literal or expression.
+/// * By default, the derived implementation invokes `CanonicalSerialize` and `CanonicalDeserialize`
+///   with `uncompressed` and `unchecked` flags.
+/// * If `compressed` and/or `checked` flags are presented, the derived implementation will behave
+///   accordingly.
+///
 /// Specifically, this macro does 4 things when applied to a type definition:
 /// * It adds `#[derive(Serialize, Deserialize)]` to the type definition, along with serde
 ///   attributes to serialize using [TaggedBase64].
@@ -49,7 +56,7 @@ use syn::{parse_macro_input, AttributeArgs, Item, Meta, NestedMeta};
 /// # use ark_std::UniformRand;
 /// # use tagged_base64_macros::tagged;
 /// # use rand_chacha::{ChaChaRng, rand_core::SeedableRng};
-/// # #[tagged("PRIM")]
+/// # #[tagged("PRIM", compressed)]
 /// # #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, /* any other derives */)]
 /// # struct CryptoPrim(ark_bls12_381::Fr);
 /// # let crypto_prim = CryptoPrim(ark_bls12_381::Fr::rand(&mut ChaChaRng::from_seed([42; 32])));
@@ -61,7 +68,7 @@ use syn::{parse_macro_input, AttributeArgs, Item, Meta, NestedMeta};
 /// # use ark_std::UniformRand;
 /// # use tagged_base64_macros::tagged;
 /// # use rand_chacha::{ChaChaRng, rand_core::SeedableRng};
-/// # #[tagged("PRIM")]
+/// # #[tagged("PRIM", compressed, checked)]
 /// # #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, /* any other derives */)]
 /// # struct CryptoPrim(ark_bls12_381::Fr);
 /// # let crypto_prim = CryptoPrim(ark_bls12_381::Fr::rand(&mut ChaChaRng::from_seed([42; 32])));
