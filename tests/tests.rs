@@ -443,7 +443,7 @@ fn one_bit_corruption_quickcheck(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16
 struct Blob(Vec<u8>);
 
 #[tagged("BLOB", compressed)]
-#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct BlobCompressed(Vec<u8>);
 
 #[tagged("BLOB", checked)]
@@ -451,8 +451,109 @@ struct BlobCompressed(Vec<u8>);
 struct BlobChecked(Vec<u8>);
 
 #[tagged("BLOB", compressed, checked)]
-#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct BlobCompressedChecked(Vec<u8>);
+
+impl Valid for BlobCompressed {
+    fn check(&self) -> Result<(), SerializationError> {
+        // Mock test, validation always fails
+        Err(SerializationError::InvalidData)
+    }
+}
+
+impl CanonicalSerialize for BlobCompressed {
+    fn serialize_with_mode<W: Write>(
+        &self,
+        mut writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        // Mock test, always serialize into fixed bytes array
+        match compress {
+            Compress::Yes => writer
+                .write_all(&[1])
+                .map_err(|_| SerializationError::InvalidData),
+            Compress::No => writer
+                .write_all(&[1, 2])
+                .map_err(|_| SerializationError::InvalidData),
+        }
+    }
+
+    fn serialized_size(&self, compress: Compress) -> usize {
+        // Mock test, always return the same size
+        // Actually this function is not used in derived serde implementation.
+        if compress == Compress::Yes {
+            1
+        } else {
+            2
+        }
+    }
+}
+
+impl CanonicalDeserialize for BlobCompressed {
+    fn deserialize_with_mode<R: Read>(
+        _reader: R,
+        compress: Compress,
+        validate: Validate,
+    ) -> Result<Self, SerializationError> {
+        if validate == Validate::Yes {
+            unreachable!()
+        } else {
+            match compress {
+                Compress::Yes => Ok(Self(vec![1])),
+                Compress::No => Ok(Self(vec![1, 2])),
+            }
+        }
+    }
+}
+impl Valid for BlobCompressedChecked {
+    fn check(&self) -> Result<(), SerializationError> {
+        // Mock test, validation always fails
+        Err(SerializationError::InvalidData)
+    }
+}
+
+impl CanonicalSerialize for BlobCompressedChecked {
+    fn serialize_with_mode<W: Write>(
+        &self,
+        mut writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        // Mock test, always serialize into fixed bytes array
+        match compress {
+            Compress::Yes => writer
+                .write_all(&[1])
+                .map_err(|_| SerializationError::InvalidData),
+            Compress::No => writer
+                .write_all(&[1, 2])
+                .map_err(|_| SerializationError::InvalidData),
+        }
+    }
+
+    fn serialized_size(&self, compress: Compress) -> usize {
+        // Mock test, always return the same size
+        // Actually this function is not used in derived serde implementation.
+        if compress == Compress::Yes {
+            1
+        } else {
+            2
+        }
+    }
+}
+
+impl CanonicalDeserialize for BlobCompressedChecked {
+    fn deserialize_with_mode<R: Read>(
+        _reader: R,
+        _compress: Compress,
+        validate: Validate,
+    ) -> Result<Self, SerializationError> {
+        if validate == Validate::Yes {
+            // Mock test, validation always fails
+            Err(SerializationError::InvalidData)
+        } else {
+            unreachable!()
+        }
+    }
+}
 
 #[test]
 fn test_tagged() {
@@ -479,5 +580,19 @@ fn test_serde_bincode() {
     assert_eq!(
         t,
         bincode::deserialize(&bincode::serialize(&t).unwrap()).unwrap()
+    );
+}
+
+#[test]
+fn test_serde_compressed_checked() {
+    let blob = BlobCompressedChecked(vec![1, 2]);
+    let bytes = bincode::serialize(&blob).unwrap();
+    assert!(bincode::deserialize::<BlobCompressedChecked>(&bytes).is_err());
+
+    let blob = BlobCompressed(vec![1, 2]);
+    let bytes = bincode::serialize(&blob).unwrap();
+    assert_eq!(
+        bincode::deserialize::<BlobCompressed>(&bytes).unwrap(),
+        BlobCompressed(vec![1])
     );
 }
