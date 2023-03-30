@@ -94,7 +94,7 @@ impl Serialize for TaggedBase64 {
         } else {
             // For binary formats, convert to bytes (using CanonicalSerialize) and write the bytes.
             let mut bytes = vec![];
-            CanonicalSerialize::serialize(self, &mut bytes).map_err(S::Error::custom)?;
+            CanonicalSerialize::serialize_compressed(self, &mut bytes).map_err(S::Error::custom)?;
             Serialize::serialize(&bytes, serializer)
         }
     }
@@ -114,7 +114,8 @@ impl<'a> Deserialize<'a> for TaggedBase64 {
             // Otherwise, this is a binary format; deserialize bytes and then convert the bytes to
             // TaggedBase64 using CanonicalDeserialize.
             let bytes = <Vec<u8> as Deserialize>::deserialize(deserializer)?;
-            CanonicalDeserialize::deserialize(bytes.as_slice()).map_err(D::Error::custom)
+            CanonicalDeserialize::deserialize_compressed_unchecked(bytes.as_slice())
+                .map_err(D::Error::custom)
         }
     }
 }
@@ -285,11 +286,7 @@ impl TaggedBase64 {
     /// Returns true for characters permitted in URL-safe base64 encoding,
     /// and false otherwise.
     pub fn is_safe_base64_ascii(c: char) -> bool {
-        ('a'..='z').contains(&c)
-            || ('A'..='Z').contains(&c)
-            || ('0'..='9').contains(&c)
-            || (c == '-')
-            || (c == '_')
+        c.is_ascii_alphanumeric() || (c == '-') || (c == '_')
     }
 
     /// Checks that an ASCII byte is safe for use in the tag of a

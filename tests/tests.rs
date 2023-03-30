@@ -33,7 +33,7 @@ wasm_bindgen_test_configure!(run_in_browser);
 fn base64_sanity() {
     let hello = b"hello rustaceans";
     let encoded = encode_config(hello, TB64_CONFIG);
-    let decoded = decode_config(&encoded, TB64_CONFIG).unwrap();
+    let decoded = decode_config(encoded, TB64_CONFIG).unwrap();
     assert_eq!(&hello.to_vec(), &decoded);
     assert_eq!(
         str::from_utf8(hello).unwrap(),
@@ -143,7 +143,7 @@ fn test_display() {
 /// - Generated string can be parsed
 /// - Accessors and parsed string match the supplied values
 fn check_tb64(tag: &str, value: &[u8]) {
-    let mut tb64 = TaggedBase64::new(tag, &value).unwrap();
+    let mut tb64 = TaggedBase64::new(tag, value).unwrap();
     let str = format!("{}", &tb64);
 
     // use web_sys;
@@ -157,7 +157,7 @@ fn check_tb64(tag: &str, value: &[u8]) {
     assert_eq!(parsed.tag(), tag);
 
     // Do we get back the binary value we supplied?
-    assert!(is_equal(&parsed.value(), &value));
+    assert!(is_equal(&parsed.value(), value));
 
     // If we change the tag, do we get back the new tag?
     tb64.set_tag("foo");
@@ -213,13 +213,13 @@ fn tagged_base64_parse() {
     assert!(TaggedBase64::new("Σ", b"").is_err());
 
     // Note, u128::MAX is 340282366920938463463374607431768211455
-    check_tb64("PK", &u128::MAX.to_string().as_bytes());
+    check_tb64("PK", u128::MAX.to_string().as_bytes());
 
     // Is ten copies of u128::MAX a big enough test?
     let z = u128::MAX;
     check_tb64(
         "many-bits",
-        &format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z).as_bytes(),
+        format!("{}{}{}{}{}{}{}{}{}{}", z, z, z, z, z, z, z, z, z, z).as_bytes(),
     );
 
     check_tb64("TX", b"transaction identifier goes here");
@@ -265,7 +265,7 @@ fn test_tagged_base64_new() {
 fn tag_accessor() {
     let tag = "Tag47";
     let bits = b"Just some bits";
-    let tb64 = TaggedBase64::new(&tag, bits).unwrap();
+    let tb64 = TaggedBase64::new(tag, bits).unwrap();
     assert_eq!(tb64.tag(), tag);
     assert_eq!(tb64.value(), bits);
 }
@@ -442,9 +442,122 @@ fn one_bit_corruption_quickcheck(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16
 #[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 struct Blob(Vec<u8>);
 
+#[tagged("BLOB", compressed)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct BlobCompressed(Vec<u8>);
+
+#[tagged("BLOB", checked)]
+#[derive(Clone, Debug, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
+struct BlobChecked(Vec<u8>);
+
+#[tagged("BLOB", compressed, checked)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct BlobCompressedChecked(Vec<u8>);
+
+impl Valid for BlobCompressed {
+    fn check(&self) -> Result<(), SerializationError> {
+        // Mock test, validation always fails
+        Err(SerializationError::InvalidData)
+    }
+}
+
+impl CanonicalSerialize for BlobCompressed {
+    fn serialize_with_mode<W: Write>(
+        &self,
+        mut writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        // Mock test, always serialize into fixed bytes array
+        match compress {
+            Compress::Yes => writer
+                .write_all(&[1])
+                .map_err(|_| SerializationError::InvalidData),
+            Compress::No => writer
+                .write_all(&[1, 2])
+                .map_err(|_| SerializationError::InvalidData),
+        }
+    }
+
+    fn serialized_size(&self, compress: Compress) -> usize {
+        // Mock test, always return the same size
+        // Actually this function is not used in derived serde implementation.
+        if compress == Compress::Yes {
+            1
+        } else {
+            2
+        }
+    }
+}
+
+impl CanonicalDeserialize for BlobCompressed {
+    fn deserialize_with_mode<R: Read>(
+        _reader: R,
+        compress: Compress,
+        validate: Validate,
+    ) -> Result<Self, SerializationError> {
+        if validate == Validate::Yes {
+            unreachable!()
+        } else {
+            match compress {
+                Compress::Yes => Ok(Self(vec![1])),
+                Compress::No => Ok(Self(vec![1, 2])),
+            }
+        }
+    }
+}
+impl Valid for BlobCompressedChecked {
+    fn check(&self) -> Result<(), SerializationError> {
+        // Mock test, validation always fails
+        Err(SerializationError::InvalidData)
+    }
+}
+
+impl CanonicalSerialize for BlobCompressedChecked {
+    fn serialize_with_mode<W: Write>(
+        &self,
+        mut writer: W,
+        compress: Compress,
+    ) -> Result<(), SerializationError> {
+        // Mock test, always serialize into fixed bytes array
+        match compress {
+            Compress::Yes => writer
+                .write_all(&[1])
+                .map_err(|_| SerializationError::InvalidData),
+            Compress::No => writer
+                .write_all(&[1, 2])
+                .map_err(|_| SerializationError::InvalidData),
+        }
+    }
+
+    fn serialized_size(&self, compress: Compress) -> usize {
+        // Mock test, always return the same size
+        // Actually this function is not used in derived serde implementation.
+        if compress == Compress::Yes {
+            1
+        } else {
+            2
+        }
+    }
+}
+
+impl CanonicalDeserialize for BlobCompressedChecked {
+    fn deserialize_with_mode<R: Read>(
+        _reader: R,
+        _compress: Compress,
+        validate: Validate,
+    ) -> Result<Self, SerializationError> {
+        if validate == Validate::Yes {
+            // Mock test, validation always fails
+            Err(SerializationError::InvalidData)
+        } else {
+            unreachable!()
+        }
+    }
+}
+
 #[test]
 fn test_tagged() {
-    let bytes = (0..100).into_iter().collect();
+    let bytes = (0..100).collect();
     let b = Blob(bytes);
     let t = TaggedBase64::from(&b);
     assert!(t.to_string().starts_with("BLOB~"));
@@ -453,7 +566,7 @@ fn test_tagged() {
 
 #[test]
 fn test_serde_json() {
-    let bytes = (0..100).into_iter().collect::<Vec<_>>();
+    let bytes = (0..100).collect::<Vec<_>>();
     let t = TaggedBase64::new("TAG", &bytes).unwrap();
     let s = serde_json::to_string(&t).unwrap();
     assert!(s.starts_with("\"TAG~"));
@@ -462,10 +575,24 @@ fn test_serde_json() {
 
 #[test]
 fn test_serde_bincode() {
-    let bytes = (0..100).into_iter().collect::<Vec<_>>();
+    let bytes = (0..100).collect::<Vec<_>>();
     let t = TaggedBase64::new("TAG", &bytes).unwrap();
     assert_eq!(
         t,
         bincode::deserialize(&bincode::serialize(&t).unwrap()).unwrap()
+    );
+}
+
+#[test]
+fn test_serde_compressed_checked() {
+    let blob = BlobCompressedChecked(vec![1, 2]);
+    let bytes = bincode::serialize(&blob).unwrap();
+    assert!(bincode::deserialize::<BlobCompressedChecked>(&bytes).is_err());
+
+    let blob = BlobCompressed(vec![1, 2]);
+    let bytes = bincode::serialize(&blob).unwrap();
+    assert_eq!(
+        bincode::deserialize::<BlobCompressed>(&bytes).unwrap(),
+        BlobCompressed(vec![1])
     );
 }

@@ -17,6 +17,13 @@ use syn::{parse_macro_input, AttributeArgs, Item, Meta, NestedMeta};
 /// this macro will serialize the type as bytes for binary encodings and as base 64 for human
 /// readable encodings.
 ///
+/// This macro takes at least one arguments:
+/// * The first argument should be the tag, as a string literal or expression.
+/// * By default, the derived implementation invokes `CanonicalSerialize` and `CanonicalDeserialize`
+///   with `uncompressed` and `unchecked` flags.
+/// * If `compressed` and/or `checked` flags are presented, the derived implementation will behave
+///   accordingly.
+///
 /// Specifically, this macro does 4 things when applied to a type definition:
 /// * It adds `#[derive(Serialize, Deserialize)]` to the type definition, along with serde
 ///   attributes to serialize using [TaggedBase64].
@@ -49,7 +56,7 @@ use syn::{parse_macro_input, AttributeArgs, Item, Meta, NestedMeta};
 /// # use ark_std::UniformRand;
 /// # use tagged_base64_macros::tagged;
 /// # use rand_chacha::{ChaChaRng, rand_core::SeedableRng};
-/// # #[tagged("PRIM")]
+/// # #[tagged("PRIM", compressed)]
 /// # #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, /* any other derives */)]
 /// # struct CryptoPrim(ark_bls12_381::Fr);
 /// # let crypto_prim = CryptoPrim(ark_bls12_381::Fr::rand(&mut ChaChaRng::from_seed([42; 32])));
@@ -61,7 +68,7 @@ use syn::{parse_macro_input, AttributeArgs, Item, Meta, NestedMeta};
 /// # use ark_std::UniformRand;
 /// # use tagged_base64_macros::tagged;
 /// # use rand_chacha::{ChaChaRng, rand_core::SeedableRng};
-/// # #[tagged("PRIM")]
+/// # #[tagged("PRIM", compressed, checked)]
 /// # #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, /* any other derives */)]
 /// # struct CryptoPrim(ark_bls12_381::Fr);
 /// # let crypto_prim = CryptoPrim(ark_bls12_381::Fr::rand(&mut ChaChaRng::from_seed([42; 32])));
@@ -79,13 +86,45 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         _ => panic!("expected struct or enum"),
     };
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let tag: &dyn quote::ToTokens = match args.as_slice() {
-        [NestedMeta::Lit(tag)] => tag,
-        [NestedMeta::Meta(Meta::Path(path))] => path,
+    let mut compressed = false;
+    let mut checked = false;
+    let (tag, marks): (&dyn quote::ToTokens, _) = match args.as_slice() {
+        [NestedMeta::Lit(tag), marks @ ..] => (tag, marks),
+        [NestedMeta::Meta(Meta::Path(path)), marks @ ..] => (path, marks),
         x => panic!(
-            "`tagged` takes one argument, the tag, as a string literal or expression, found {:?}",
+            "`tagged` takes at least one argument, the tag, as a string literal or expression, found {:?}",
             x
         ),
+    };
+    marks.into_iter().for_each(|attr| match attr {
+        NestedMeta::Meta(Meta::Path(path)) => {
+            if path.is_ident("compressed") {
+                compressed = true;
+            } else if path.is_ident("checked") {
+                checked = true;
+            } else {
+                panic!("Unkown tagged argument, should be either \"compressed\" or \"checked\".")
+            }
+        }
+        _ => panic!("Unkown tagged argument, should be either \"compressed\" or \"checked\"."),
+    });
+    let serialize_token = if compressed {
+        quote!(serialize_compressed)
+    } else {
+        quote!(serialize_uncompressed)
+    };
+    let deserialize_token = if compressed {
+        if checked {
+            quote!(deserialize_compressed)
+        } else {
+            quote!(deserialize_compressed_unchecked)
+        }
+    } else {
+        if checked {
+            quote!(deserialize_uncompressed)
+        } else {
+            quote!(deserialize_uncompressed_unchecked)
+        }
     };
 
     #[cfg(feature = "serde")]
@@ -127,7 +166,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
             type Error = tagged_base64::Tb64Error;
             fn try_from(t: &tagged_base64::TaggedBase64) -> Result<Self, Self::Error> {
                 if t.tag() == <#name #ty_generics as tagged_base64::Tagged>::tag() {
-                    <Self as CanonicalDeserialize>::deserialize(t.as_ref())
+                    <Self as CanonicalDeserialize>::#deserialize_token(t.as_ref())
                         .map_err(|_| tagged_base64::Tb64Error::InvalidData)
                 } else {
                     Err(tagged_base64::Tb64Error::InvalidTag)
@@ -148,7 +187,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             fn from(x: &#name #ty_generics) -> Self {
                 let mut bytes = ark_std::vec![];
-                CanonicalSerialize::serialize(x, &mut bytes).unwrap();
+                CanonicalSerialize::#serialize_token(x, &mut bytes).unwrap();
                 Self::new(&<#name #ty_generics as tagged_base64::Tagged>::tag(), &bytes).unwrap()
             }
         }
