@@ -15,23 +15,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel Outdated Builds
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
-          access_token: ${{ github.token }}
-
       - name: Checkout Repository
         uses: actions/checkout@v3
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: default
-          toolchain: stable
-          override: true
-          default: true
-          components: rustfmt, clippy
 
       - name: Enable Rust Caching
         uses: Swatinem/rust-cache@v2
@@ -44,20 +29,15 @@ jobs:
           rm -rv wasm.tar.gz wasm-pack-*
 
       - name: Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ github.token }}
+        run: |
+          cargo clippy -- -D warnings
 
       - name: Clippy without default features
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ github.token }}
-          args: --no-default-features
+        run: |
+          cargo clippy --no-default-features -- -D warnings
 
       - name: Audit
-        uses: actions-rs/audit-check@v1
-        with:
-          token: ${{ github.token }}
+        run: cargo audit
 
       - name: Cargo Build
         run: cargo build
