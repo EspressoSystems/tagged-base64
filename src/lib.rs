@@ -44,7 +44,7 @@
 #[cfg(feature = "ark-serialize")]
 use ark_serialize::*;
 use core::fmt;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 use core::fmt::Display;
 use core::str::FromStr;
 use crc_any::CRC;
@@ -55,7 +55,7 @@ use serde::{
 };
 use snafu::Snafu;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 use wasm_bindgen::prelude::*;
 
 pub use tagged_base64_macros::tagged;
@@ -69,7 +69,7 @@ pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
 
 /// A structure holding a string tag, vector of bytes, and a checksum
 /// covering the tag and the bytes.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", feature = "wasm-bindgen"), wasm_bindgen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(
     feature = "ark-serialize",
@@ -124,7 +124,7 @@ impl<'a> Deserialize<'a> for TaggedBase64 {
 ///
 /// The primary difference is that JsTaggedBase64 returns errors
 /// of type JsValue.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", feature = "wasm-bindgen"), wasm_bindgen)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JsTaggedBase64 {
     tb64: TaggedBase64,
@@ -162,7 +162,7 @@ pub enum Tb64Error {
 }
 
 /// Converts a TaggedBase64 value to a String.
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[cfg_attr(all(target_arch = "wasm32", feature = "wasm-bindgen"), wasm_bindgen)]
 pub fn to_string(tb64: &TaggedBase64) -> String {
     let value = &mut tb64.value.clone();
     value.push(tb64.checksum);
@@ -354,19 +354,19 @@ impl AsRef<[u8]> for TaggedBase64 {
 ///
 /// Note: Type parameters aren't supported by `wasm-pack` yet so this
 /// can't be included in the TaggedBase64 type implementation.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 pub fn to_jsvalue<D: Display>(d: D) -> JsValue {
     JsValue::from_str(&format!("{}", d))
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 impl From<Tb64Error> for JsValue {
     fn from(error: Tb64Error) -> JsValue {
         to_jsvalue(format!("{}", error))
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 #[wasm_bindgen]
 impl JsTaggedBase64 {
     #[wasm_bindgen(constructor)]
