@@ -40,6 +40,7 @@
 //! allow safe transit to- and from JavaScript, including in URLs, as
 //! well as display and input in a user interface.
 
+#![no_std]
 #![allow(clippy::unused_unit)]
 #[cfg(feature = "ark-serialize")]
 use ark_serialize::*;
@@ -54,6 +55,12 @@ use serde::{
     ser::{Error as SerError, Serialize, Serializer},
 };
 use snafu::Snafu;
+
+use ark_std::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 #[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 use wasm_bindgen::prelude::*;
@@ -93,7 +100,7 @@ impl Serialize for TaggedBase64 {
             Serialize::serialize(&self.to_string(), serializer)
         } else {
             // For binary formats, convert to bytes (using CanonicalSerialize) and write the bytes.
-            let mut bytes = vec![];
+            let mut bytes = Vec::new();
             CanonicalSerialize::serialize_compressed(self, &mut bytes).map_err(S::Error::custom)?;
             Serialize::serialize(&bytes, serializer)
         }
