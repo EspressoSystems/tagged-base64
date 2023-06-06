@@ -40,7 +40,7 @@ jobs:
         run: cargo audit
 
       - name: Cargo Build
-        run: cargo build
+        run: cargo build --workspace
 
       - name: Cargo Test
         run: cargo test --verbose -- -Zunstable-options --report-time
