@@ -1,9 +1,10 @@
 [package]
 name = "tagged-base64-macros"
 description = "Procedural macros associated with tagged-base64"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2021"
+license = "MIT"
 
 [lib]
 proc-macro = true
