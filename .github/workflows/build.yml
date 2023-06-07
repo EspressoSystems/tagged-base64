@@ -47,3 +47,6 @@ jobs:
 
       - name: Web Test
         run: wasm-pack test --headless --firefox
+
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
