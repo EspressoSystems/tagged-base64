@@ -43,7 +43,7 @@ jobs:
         run: cargo build --workspace
 
       - name: Cargo Test
-        run: cargo test --verbose -- -Zunstable-options --report-time
+        run: cargo test --verbose
 
       - name: Web Test
         run: wasm-pack test --headless --firefox
