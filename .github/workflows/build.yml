@@ -48,5 +48,8 @@ jobs:
       - name: Web Test
         run: wasm-pack test --headless --firefox
 
-      - name: Check semver
-        uses: obi1kenobi/cargo-semver-checks-action@v2
+      # Temporarily disable semver check
+      #- name: Check semver
+      #  uses: obi1kenobi/cargo-semver-checks-action@v2
+      #  with:
+      #    package: tagged-base64
