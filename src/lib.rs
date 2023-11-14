@@ -119,8 +119,14 @@ impl<'a> Deserialize<'a> for TaggedBase64 {
     {
         if deserializer.is_human_readable() {
             // If we are deserializing a human-readable format, the serializer would have written
-            // the tagged base 64 as a string, so deserialize a string and then parse it.
-            Self::from_str(Deserialize::deserialize(deserializer)?).map_err(D::Error::custom)
+            // the tagged base 64 as a string, so deserialize a string and then parse it. We need to
+            // explicitly deserialize as an owned `String` before parsing. If we just did
+            // `Self::from_str(&Deserialize::deserialize(...)?)`, the type for deserialization would
+            // be inferred as `str`, and serde would try to borrow from the input, since `str` is
+            // not a `Sized` type. Not all inputs support borrowing. For instance, this makes it
+            // impossible to deserialize from a `serde_json::Value`.
+            let s: String = Deserialize::deserialize(deserializer)?;
+            Self::from_str(&s).map_err(D::Error::custom)
         } else {
             // Otherwise, this is a binary format; deserialize bytes and then convert the bytes to
             // TaggedBase64 using CanonicalDeserialize.

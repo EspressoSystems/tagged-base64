@@ -561,12 +561,20 @@ fn test_tagged() {
 }
 
 #[test]
-fn test_serde_json() {
+fn test_serde_json_str() {
     let bytes = (0..100).collect::<Vec<_>>();
     let t = TaggedBase64::new("TAG", &bytes).unwrap();
     let s = serde_json::to_string(&t).unwrap();
     assert!(s.starts_with("\"TAG~"));
     assert_eq!(t, serde_json::from_str(&s).unwrap());
+}
+
+#[test]
+fn test_serde_json_value() {
+    let bytes = (0..100).collect::<Vec<_>>();
+    let t = TaggedBase64::new("TAG", &bytes).unwrap();
+    let v = serde_json::to_value(&t).unwrap();
+    assert_eq!(t, serde_json::from_value(v).unwrap());
 }
 
 #[test]
