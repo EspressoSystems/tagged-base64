@@ -44,6 +44,10 @@
 #![allow(clippy::unused_unit)]
 #[cfg(feature = "ark-serialize")]
 use ark_serialize::*;
+use base64::{
+    alphabet::URL_SAFE,
+    engine::{general_purpose::NO_PAD, Engine, GeneralPurpose},
+};
 use core::fmt;
 #[cfg(all(target_arch = "wasm32", feature = "wasm-bindgen"))]
 use core::fmt::Display;
@@ -71,8 +75,8 @@ pub use tagged_base64_macros::tagged;
 /// appear in URLs without percent-encoding.
 pub const TB64_DELIM: char = '~';
 
-/// Uses '-' and '_' as the 63rd and 64th characters. Does not use padding.
-pub const TB64_CONFIG: base64::Config = base64::URL_SAFE_NO_PAD;
+/// Base 64 engine configured for TaggedBase64.
+pub const BASE64: GeneralPurpose = GeneralPurpose::new(&URL_SAFE, NO_PAD);
 
 /// A structure holding a string tag, vector of bytes, and a checksum
 /// covering the tag and the bytes.
@@ -145,27 +149,20 @@ pub enum Tb64Error {
     MissingDelimiter,
     /// Missing checksum in value.
     MissingChecksum,
-    /// An invalid byte was found while decoding the base64-encoded value.
-    /// The offset and offending byte are provided.
-    #[snafu(display(
-        "An invalid byte ({:#x}) was found at offset {} while decoding the base64-encoded value.",
-        byte,
-        offset
-    ))]
-    InvalidByte { offset: usize, byte: u8 },
-    /// The last non-padding input symbol's encoded 6 bits have
-    /// nonzero bits that will be discarded. This is indicative of
-    /// corrupted or truncated Base64. Unlike InvalidByte, which
-    /// reports symbols that aren't in the alphabet, this error is for
-    /// symbols that are in the alphabet but represent nonsensical
-    /// encodings.
-    InvalidLastSymbol { offset: usize, byte: u8 },
-    /// The length of the base64-encoded value is invalid.
-    InvalidLength,
+    #[snafu(display("invalid base 64: {message}"))]
+    Base64 { message: String },
     /// The checksum was truncated or did not match.
     InvalidChecksum,
     /// The data did not encode the expected type.
     InvalidData,
+}
+
+impl From<base64::DecodeError> for Tb64Error {
+    fn from(err: base64::DecodeError) -> Self {
+        Self::Base64 {
+            message: err.to_string(),
+        }
+    }
 }
 
 /// Converts a TaggedBase64 value to a String.
@@ -330,23 +327,13 @@ impl TaggedBase64 {
     /// Wraps the underlying base64 encoder.
     // WASM doesn't support the most general type.
     //
-    // pub fn encode_raw<T: ?Sized + AsRef<[u8]>>(input: &T) -> String {
-    //     base64::encode_config(input, TB64_CONFIG)
-    // }
+    // pub fn encode_raw<T: ?Sized + AsRef<[u8]>>(input: &T) -> String;
     pub fn encode_raw(input: &[u8]) -> String {
-        base64::encode_config(input, TB64_CONFIG)
+        BASE64.encode(input)
     }
     /// Wraps the underlying base64 decoder.
     pub fn decode_raw(value: &str) -> Result<Vec<u8>, Tb64Error> {
-        base64::decode_config(value, TB64_CONFIG).map_err(|err| match err {
-            base64::DecodeError::InvalidByte(offset, byte) => {
-                Tb64Error::InvalidByte { offset, byte }
-            }
-            base64::DecodeError::InvalidLength => Tb64Error::InvalidLength,
-            base64::DecodeError::InvalidLastSymbol(offset, byte) => {
-                Tb64Error::InvalidLastSymbol { offset, byte }
-            }
-        })
+        Ok(BASE64.decode(value)?)
     }
 }
 

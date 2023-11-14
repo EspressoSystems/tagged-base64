@@ -1,9 +1,9 @@
 // Copyright © 2022 Translucence Research, Inc. All rights reserved.
 
 use ark_serialize::*;
+use base64::engine::Engine;
 use quickcheck_macros::quickcheck;
 
-use base64::{decode_config, encode_config};
 use std::convert::TryInto;
 use std::str;
 use tagged_base64::*;
@@ -32,15 +32,15 @@ wasm_bindgen_test_configure!(run_in_browser);
 /// - The base64 encoding of the empty string is the empty string.
 fn base64_sanity() {
     let hello = b"hello rustaceans";
-    let encoded = encode_config(hello, TB64_CONFIG);
-    let decoded = decode_config(encoded, TB64_CONFIG).unwrap();
+    let encoded = BASE64.encode(hello);
+    let decoded = BASE64.decode(encoded).unwrap();
     assert_eq!(&hello.to_vec(), &decoded);
     assert_eq!(
         str::from_utf8(hello).unwrap(),
         str::from_utf8(&decoded).unwrap()
     );
 
-    assert_eq!(decode_config("", TB64_CONFIG).unwrap().len(), 0);
+    assert_eq!(BASE64.decode("").unwrap().len(), 0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -181,7 +181,7 @@ fn tagged_base64_parse() {
     assert!(TaggedBase64::parse("&_~wA").is_err());
 
     // A null value is not allowed.
-    let b64_null = encode_config("", TB64_CONFIG);
+    let b64_null = BASE64.encode("");
     let tagged = format!("a~{}", &b64_null);
     assert!(TaggedBase64::parse(&tagged).is_err());
 
@@ -375,13 +375,9 @@ fn test_error_fmt() {
     assert_eq!(
         format!(
             "{}",
-            Tb64Error::InvalidByte {
-                offset: 66,
-                byte: 42
-            }
+            Tb64Error::from(base64::DecodeError::InvalidByte(66, 42))
         ),
-        "An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value."
-            .to_string()
+        "invalid base 64: Invalid byte 42, offset 66."
     );
 }
 
@@ -397,7 +393,7 @@ fn basic_errors() {
 
     let e = TaggedBase64::parse("AAA~A/A").unwrap_err();
     println!("{:?}: {}", e, e);
-    assert!(matches!(e, Tb64Error::InvalidByte { .. }));
+    assert!(matches!(e, Tb64Error::Base64 { .. }));
 
     let e = TaggedBase64::parse("AAA~AAA").unwrap_err();
     println!("{:?}: {}", e, e);
@@ -409,11 +405,11 @@ fn basic_errors() {
 
     let e = TaggedBase64::parse("AAA~AAAAA").unwrap_err();
     println!("{:?}: {}", e, e);
-    assert!(matches!(e, Tb64Error::InvalidLength));
+    assert!(matches!(e, Tb64Error::Base64 { .. }));
 
     let e = TaggedBase64::parse("AAA~AAF").unwrap_err();
     println!("{:?}: {}", e, e);
-    assert!(matches!(e, Tb64Error::InvalidLastSymbol { .. }));
+    assert!(matches!(e, Tb64Error::Base64 { .. }));
 }
 
 fn one_bit_corruption(tag: u16, data: (Vec<u8>, u8), bit_to_flip: u16) {
