@@ -365,8 +365,8 @@ fn test_js_new_error() {
 #[wasm_bindgen_test]
 fn wasm_error_to_string() {
     assert_eq!(
-        JsValue::from(Tb64Error::InvalidByte { offset: 66, byte: 42 }),
-        to_jsvalue("An invalid byte (0x2a) was found at offset 66 while decoding the base64-encoded value.")
+        JsValue::from(Tb64Error::from(base64::DecodeError::InvalidByte(66, 42))),
+        to_jsvalue("invalid base 64: Invalid byte 42, offset 66.")
     );
 }
 
