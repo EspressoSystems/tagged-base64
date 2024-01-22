@@ -600,3 +600,19 @@ fn test_serde_compressed_checked() {
         BlobCompressed(vec![1])
     );
 }
+
+#[test]
+fn test_compat() {
+    // A hard-coded example, for easily checking compatibility with ports to other languages.
+    let tag = "abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789";
+    let data = "~Yeah, we can have spaces and odd stuff—😀 here. ¯⧵_(ツ)_/¯".as_bytes();
+    let expected = "abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789~flllYWgsIHdlIGNhbiBoYXZlIHNwYWNlcyBhbmQgb2RkIHN0dWZm4oCU8J-YgCBoZXJlLiDCr-KntV8o44OEKV8vwq_6";
+
+    let tb64 = TaggedBase64::new(tag, data).unwrap();
+    let s = tb64.to_string();
+    assert_eq!(
+        s, expected,
+        "actual string {s} does not match expected {expected}"
+    );
+    assert_eq!(tb64, expected.parse().unwrap());
+}
