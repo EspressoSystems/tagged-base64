@@ -24,7 +24,7 @@ build-cli = ["dep:clap"]
 [dependencies]
 ark-serialize = { workspace = true, optional = true, features = ["derive"] }
 ark-std = { workspace = true }
-base64 = "0.21"
+base64 = { workspace = true }
 crc-any = { version = "2.4.1", default-features = false }
 serde = { workspace = true, optional = true, features = ["derive"] }
 snafu = { workspace = true }

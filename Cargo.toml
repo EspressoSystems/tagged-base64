@@ -15,6 +15,7 @@ members = [
 ark-bls12-381 = "0.4"
 ark-serialize = { version = "0.4", default-features = false }
 ark-std = { version = "0.4", default-features = false }
+base64 = "0.22"
 rand_chacha = "0.3"
 serde = "1.0"
 snafu = "0.8"
