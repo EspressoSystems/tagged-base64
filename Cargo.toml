@@ -1,6 +1,6 @@
 [package]
 name = "tagged-base64"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Espresso Systems <hello@espressosys.com>"]
 edition = "2021"
 description = "User-oriented format for binary data. Tagged Base64 is intended to be used in user interfaces including URLs and text to be copied and pasted without the need for additional encoding, such as quoting or escape sequences."

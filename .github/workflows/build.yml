@@ -4,16 +4,76 @@ on:
   push:
     branches:
       - main
+      - release-*
+    tags:
+      - v*.*.*
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: '0 0 * * 1'
+      - release-*
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Format Check
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        uses: actions-rs-plus/clippy-check@v1
+        with:
+            token: ${{ github.token }}
+            args: --workspace --all-features --all-targets -- -D warnings
+
   build:
     runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Build
+        run: cargo build --all-features --all-targets --release
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Build tests
+        run: cargo test --workspace --release --all-features --no-run
+
+      - name: Test
+        run: cargo test --workspace --release --all-features --verbose -- --test-threads 2
+        timeout-minutes: 60
+
+  wasm-test:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -28,28 +88,59 @@ jobs:
           sudo mv -v wasm*/wasm-pack /usr/bin/
           rm -rv wasm.tar.gz wasm-pack-*
 
-      - name: Clippy
-        run: |
-          cargo clippy -- -D warnings
-
-      - name: Clippy without default features
-        run: |
-          cargo clippy --no-default-features -- -D warnings
-
-      - name: Audit
-        run: cargo audit
-
-      - name: Cargo Build
-        run: cargo build --workspace
-
-      - name: Cargo Test
-        run: cargo test --verbose
-
       - name: Web Test
         run: wasm-pack test --headless --firefox
 
-      # Temporarily disable semver check
-      #- name: Check semver
-      #  uses: obi1kenobi/cargo-semver-checks-action@v2
-      #  with:
-      #    package: tagged-base64
+  docs:
+    runs-on: ubuntu-latest
+    env:
+        RUST_LOG: info
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Generate Documentation
+        run: |
+          cargo doc --no-deps --lib --release --all-features
+          echo '<meta http-equiv="refresh" content="0; url=tagged_base64">' > target/doc/index.html
+
+      - name: Deploy Documentation
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          cname: tagged-base64.docs.espressosys.com
+
+  semver-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout Repository
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+
+  publish:
+    needs:
+      - build
+      - test
+      - wasm-test
+      - lint
+      - docs
+      - semver-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: katyo/publish-crates@v2
+        with:
+            # Only do an actual publish if this is a push to a release tag. Otherwise, do a dry run.
+            dry-run: ${{ !(github.event_name == 'push' && github.ref_type == 'tag') }}
+            ignore-unpublished-changes: true
+            registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
