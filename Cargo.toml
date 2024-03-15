@@ -28,7 +28,7 @@ ark-std = { version = "0.4.0", default-features = false }
 base64 = "0.21"
 crc-any = { version = "2.4.1", default-features = false }
 serde = { version = "1.0", optional = true, features = ["derive"] }
-snafu = { version = "0.7", features = ["backtraces"] }
+snafu = { version = "0.8" }
 tagged-base64-macros = { version = "0.3.3", path = "macros", default-features = false }
 
 # Command line argument processing
