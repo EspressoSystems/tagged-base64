@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["tagged"],"constant":["BASE64","TB64_DELIM"],"enum":["Tb64Error"],"fn":["to_string"],"struct":["JsTaggedBase64","TaggedBase64"],"trait":["Tagged"]};
