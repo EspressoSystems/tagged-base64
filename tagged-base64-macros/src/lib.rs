@@ -96,7 +96,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
             x
         ),
     };
-    marks.into_iter().for_each(|attr| match attr {
+    marks.iter().for_each(|attr| match attr {
         NestedMeta::Meta(Meta::Path(path)) => {
             if path.is_ident("compressed") {
                 compressed = true;
@@ -119,12 +119,10 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
         } else {
             quote!(deserialize_compressed_unchecked)
         }
+    } else if checked {
+        quote!(deserialize_uncompressed)
     } else {
-        if checked {
-            quote!(deserialize_uncompressed)
-        } else {
-            quote!(deserialize_uncompressed_unchecked)
-        }
+        quote!(deserialize_uncompressed_unchecked)
     };
 
     #[cfg(feature = "serde")]

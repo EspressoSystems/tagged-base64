@@ -1,0 +1,63 @@
+[package]
+name = "tagged-base64"
+description = "User-oriented format for binary data. Tagged Base64 is intended to be used in user interfaces including URLs and text to be copied and pasted without the need for additional encoding, such as quoting or escape sequences."
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "tagged-base64"
+required-features = ["build-cli"]
+
+[features]
+default = ["ark-serialize", "serde", "wasm-bindgen"]
+ark-serialize = ["dep:ark-serialize"]
+serde = ["dep:serde", "tagged-base64-macros/serde"]
+wasm-bindgen = ["dep:wasm-bindgen"]
+wasm-debug = ["dep:console_error_panic_hook"]
+build-cli = ["dep:clap"]
+
+[dependencies]
+ark-serialize = { version = "0.4.0", optional = true, default-features = false, features = ["derive"] }
+ark-std = { version = "0.4.0", default-features = false }
+base64 = "0.21"
+crc-any = { version = "2.4.1", default-features = false }
+serde = { version = "1.0", optional = true, features = ["derive"] }
+snafu = { workspace = true }
+tagged-base64-macros = { version = "0.4.0", path = "../tagged-base64-macros", default-features = false }
+
+# Command line argument processing
+clap = { version = "4.0", optional = true, features = ["derive"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = { version = "0.2.78", features = ["serde-serialize"], optional = true }
+
+# required for debugging from wasm
+web-sys = { version = "0.3.49", optional = true, features = ["console", "Headers", "RequestInit", "RequestMode", "Request", "Response", "Window"] }
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[dev-dependencies]
+bincode = "1.3"
+getrandom = { version = "0.2", features = ["js"] }
+quickcheck = "1.0"
+quickcheck_macros = "1.0"
+serde_json = "1.0"
+wasm-bindgen-test = { version = "0.3.28" }
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
+debug = true
+
+# https://github.com/rustwasm/wasm-bindgen/issues/2279
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Os", "--enable-mutable-globals"]
