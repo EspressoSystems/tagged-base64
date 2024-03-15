@@ -1,11 +1,10 @@
 [package]
 name = "tagged-base64-macros"
 description = "Procedural macros associated with tagged-base64"
-version = "0.3.3"
-authors = ["Espresso Systems <hello@espressosys.com>"]
-edition = "2021"
-repository = "https://github.com/EspressoSystems/tagged-base64"
-license = "MIT"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
 
 [lib]
 proc-macro = true
