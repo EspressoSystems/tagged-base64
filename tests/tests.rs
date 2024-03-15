@@ -366,7 +366,7 @@ fn test_js_new_error() {
 fn wasm_error_to_string() {
     assert_eq!(
         JsValue::from(Tb64Error::from(base64::DecodeError::InvalidByte(66, 42))),
-        to_jsvalue("invalid base 64: Invalid byte 42, offset 66.")
+        to_jsvalue("invalid base 64: Invalid symbol 42, offset 66.")
     );
 }
 
@@ -377,7 +377,7 @@ fn test_error_fmt() {
             "{}",
             Tb64Error::from(base64::DecodeError::InvalidByte(66, 42))
         ),
-        "invalid base 64: Invalid byte 42, offset 66."
+        "invalid base 64: Invalid symbol 42, offset 66."
     );
 }
 
