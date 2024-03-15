@@ -82,14 +82,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install wasm-pack binary
-        run: |
-          wget -O wasm.tar.gz https://github.com/rustwasm/wasm-pack/releases/download/v0.10.2/wasm-pack-v0.10.2-x86_64-unknown-linux-musl.tar.gz
-          tar -xvf wasm.tar.gz
-          sudo mv -v wasm*/wasm-pack /usr/bin/
-          rm -rv wasm.tar.gz wasm-pack-*
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Web Test
         run: wasm-pack test --headless --firefox
+        working-directory: tagged-base64
 
   docs:
     runs-on: ubuntu-latest
