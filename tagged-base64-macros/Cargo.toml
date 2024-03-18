@@ -14,5 +14,5 @@ default = ["serde"]
 serde = []
 
 [dependencies]
-syn = { version = "1.0.109", features = ["full", "extra-traits"] }
+syn = { version = "2.0.53", features = ["full", "extra-traits"] }
 quote = "1.0"
