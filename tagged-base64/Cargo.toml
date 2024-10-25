@@ -14,7 +14,7 @@ name = "tagged-base64"
 required-features = ["build-cli"]
 
 [features]
-default = ["ark-serialize", "serde", "wasm-bindgen"]
+default = ["ark-serialize", "serde"]
 ark-serialize = ["dep:ark-serialize"]
 serde = ["dep:serde", "tagged-base64-macros/serde"]
 wasm-bindgen = ["dep:wasm-bindgen"]
