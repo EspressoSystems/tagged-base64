@@ -54,7 +54,7 @@ use core::fmt::Display;
 use core::str::FromStr;
 use crc_any::CRC;
 #[cfg(feature = "serde")]
-use serde::{
+use ::serde::{
     de::{Deserialize, Deserializer, Error as DeError},
     ser::{Error as SerError, Serialize, Serializer},
 };

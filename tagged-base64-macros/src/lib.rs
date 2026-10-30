@@ -58,7 +58,7 @@ pub fn tagged(args: TokenStream, input: TokenStream) -> TokenStream {
 
     #[cfg(feature = "serde")]
     let struct_def = quote! {
-        #[derive(serde::Serialize, serde::Deserialize)]
+        #[derive(::serde::Serialize, ::serde::Deserialize)]
         #[serde(try_from = "tagged_base64::TaggedBase64", into = "tagged_base64::TaggedBase64")]
         // Override the inferred bound for Serialize/Deserialize impls. If we're converting to and
         // from CanonicalBytes as an intermediate, the impls should work for any generic parameters.
