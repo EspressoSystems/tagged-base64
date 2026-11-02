@@ -42,6 +42,11 @@
 
 #![no_std]
 #![allow(clippy::unused_unit)]
+#[cfg(feature = "serde")]
+use ::serde::{
+    de::{Deserialize, Deserializer, Error as DeError},
+    ser::{Error as SerError, Serialize, Serializer},
+};
 #[cfg(feature = "ark-serialize")]
 use ark_serialize::*;
 use base64::{
@@ -53,11 +58,6 @@ use core::fmt;
 use core::fmt::Display;
 use core::str::FromStr;
 use crc_any::CRC;
-#[cfg(feature = "serde")]
-use ::serde::{
-    de::{Deserialize, Deserializer, Error as DeError},
-    ser::{Error as SerError, Serialize, Serializer},
-};
 use snafu::Snafu;
 
 use ark_std::{
