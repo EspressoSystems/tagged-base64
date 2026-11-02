@@ -144,7 +144,7 @@ fn test_display() {
 /// - Accessors and parsed string match the supplied values
 fn check_tb64(tag: &str, value: &[u8]) {
     let mut tb64 = TaggedBase64::new(tag, value).unwrap();
-    let str = format!("{}", &tb64);
+    let str = format!("{}", tb64);
 
     // use web_sys;
     // web_sys::console::log_1(&format!("{}", &tb64).into());
@@ -182,7 +182,7 @@ fn tagged_base64_parse() {
 
     // A null value is not allowed.
     let b64_null = BASE64.encode("");
-    let tagged = format!("a~{}", &b64_null);
+    let tagged = format!("a~{}", b64_null);
     assert!(TaggedBase64::parse(&tagged).is_err());
 
     // The tag can be empty, but the value cannot because the value
