@@ -1,9 +1,9 @@
 (function() {
-    var implementors = Object.fromEntries([["tagged_base64",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"tagged_base64/enum.Tb64Error.html\" title=\"enum tagged_base64::Tb64Error\">Tb64Error</a><div class=\"where\">where\n    Self: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/fmt/trait.Debug.html\" title=\"trait core::fmt::Debug\">Debug</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.89.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a>,</div>"]]]]);
+    const implementors = Object.fromEntries([["tagged_base64",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"tagged_base64/enum.Tb64Error.html\" title=\"enum tagged_base64::Tb64Error\">Tb64Error</a><div class=\"where\">where\n    Self: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/fmt/trait.Debug.html\" title=\"trait core::fmt::Debug\">Debug</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a>,</div>",0]]]]);
     if (window.register_implementors) {
         window.register_implementors(implementors);
     } else {
         window.pending_implementors = implementors;
     }
 })()
-//{"start":57,"fragment_lengths":[593]}
+//{"start":59,"fragment_lengths":[595]}
